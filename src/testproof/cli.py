@@ -10,6 +10,8 @@ import typer
 
 from testproof import __version__
 from testproof.diff import ChangedFile, Diff, DiffError, resolve_diff
+from testproof.engine import MutationEngine
+from testproof.report import to_json
 
 app = typer.Typer(
     help="Grade whether a test suite catches bugs.",
@@ -36,6 +38,7 @@ def main(
     ] = False,
 ) -> None:
     """TestProof command line interface."""
+
     del version
 
 
@@ -117,6 +120,65 @@ def _diff_payload(diff: Diff) -> dict[str, object]:
             for changed in diff.files
         ],
     }
+
+
+@app.command("grade")
+def grade_command(
+    repo: Annotated[
+        Path,
+        typer.Option(help="Repository root. Defaults to the current directory."),
+    ] = Path(),
+    base: Annotated[str, typer.Option(help="Base revision to compare from.")] = "HEAD",
+    head: Annotated[
+        str | None,
+        typer.Option(help="Head revision to compare to. Omit to compare against working tree."),
+    ] = None,
+    test_cmd: Annotated[str, typer.Option(help="Test command to run for grading.")] = "pytest -q",
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Emit the report as JSON."),
+    ] = False,
+    all_files: Annotated[
+        bool,
+        typer.Option("--all", help="Grade all files instead of diff-scoped."),
+    ] = False,
+) -> None:
+    """Grade whether a test suite catches bugs."""
+
+    if all_files:
+        changed_files: list[tuple[str, set[int] | None]] = []
+        for path in repo.rglob("*.py"):
+            changed_files.append((str(path.relative_to(repo)), None))
+        target = "WORKTREE"
+        merge_base = None
+        base_ref = None
+        head_ref = None
+    else:
+        diff = resolve_diff(repo=repo, base=base, head=head)
+        changed_files = []
+        for changed in diff.files:
+            line_set = None
+            if changed.lines:
+                line_set = {ln for rng in changed.lines for ln in range(rng.start, rng.end + 1)}
+            changed_files.append((changed.path, line_set))
+        target = "HEAD" if head is not None and head != "WORKTREE" else "WORKTREE"
+        merge_base = None
+        base_ref = diff.base
+        head_ref = diff.head
+
+    engine = MutationEngine(repo=repo, test_command=test_cmd)
+    report = engine.grade(
+        target=target,
+        base_ref=base_ref,
+        head_ref=head_ref,
+        merge_base=merge_base,
+        changed_files=changed_files,
+    )
+
+    if as_json:
+        typer.echo(to_json(report))
+    else:
+        typer.echo(f"Score: {report.summary.score}")
 
 
 if __name__ == "__main__":
