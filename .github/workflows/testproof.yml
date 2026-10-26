@@ -1,0 +1,25 @@
+name: TestProof preview
+
+# Phase 2 replaces this manual preview with the real grade gate.
+# It is manual now because the mutation engine is not implemented yet.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked
+      - name: Show changed files
+        run: uv run testproof diff --base origin/main --head HEAD

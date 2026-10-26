@@ -1,0 +1,60 @@
+flowchart TB
+    subgraph people["People and triggers"]
+        dev["Developer"]
+        agent["Alan agent or coding agent"]
+        pr["Pull request"]
+    end
+
+    subgraph surfaces["Product surfaces"]
+        cli["TestProof CLI"]
+        skill["TestProof skill"]
+        action["GitHub Action"]
+    end
+
+    subgraph core["Deterministic core"]
+        diff["Diff resolver"]
+        adapters["Language adapters"]
+        mutate["Mutant discovery"]
+        sandbox["Sandbox workspace"]
+        runner["Project test runner"]
+        classify["Classifier and scorer"]
+        report["Report builder"]
+    end
+
+    subgraph repair["Agentic repair"]
+        repair_agent["Repair agent"]
+        model["Open source model"]
+        verifier["Kill verifier"]
+    end
+
+    subgraph outputs["Outputs"]
+        json["JSON report"]
+        markdown["Markdown report"]
+        check["Pull request check"]
+        artifact["Alan task artifact"]
+    end
+
+    dev --> cli
+    agent --> skill
+    pr --> action
+    skill --> cli
+    action --> cli
+
+    cli --> diff
+    diff --> mutate
+    adapters --> mutate
+    mutate --> sandbox
+    sandbox --> runner
+    runner --> classify
+    classify --> report
+
+    report --> json
+    report --> markdown
+    json --> check
+    json --> artifact
+    json --> repair_agent
+    repair_agent --> model
+    model --> repair_agent
+    repair_agent --> verifier
+    verifier --> runner
+    verifier --> report

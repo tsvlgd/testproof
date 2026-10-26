@@ -1,0 +1,27 @@
+# Environment
+.venv/
+__pycache__/
+*.py[cod]
+.python-version
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+bandit-report.json
+
+# Build output
+dist/
+build/
+*.egg-info/
+
+# Runtime output
+.testproof/
+
+# Editors and platforms
+.DS_Store
+.idea/
+.vscode/

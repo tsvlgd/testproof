@@ -1,0 +1,36 @@
+flowchart LR
+    P0["Phase 0<br/>Foundation<br/>CLI and diff"] --> C0{"Checkpoint 0<br/>diff works"}
+    C0 -->|yes| P1["Phase 1<br/>Deterministic engine<br/>score and survivors"]
+    C0 -->|no| X0["Simplify the diff<br/>then move on"]
+    X0 --> P1
+
+    P1 --> C1{"Checkpoint 1<br/>same input, same score"}
+    C1 -->|yes| P2["Phase 2<br/>Report and CI gate<br/>threshold and Action"]
+    C1 -->|no| X1["Cut operator families<br/>keep comparisons"]
+    X1 --> P2
+
+    P2 --> C2{"Checkpoint 2<br/>pull request gate works"}
+    C2 -->|yes| SLEEP["Sleep block<br/>review the diff"]
+    C2 -->|no| X2["Ship local CLI<br/>and workflow file"]
+    X2 --> SLEEP
+
+    SLEEP --> P3["Phase 3<br/>Verified repair<br/>open model plus verifier"]
+    P3 --> C3{"Checkpoint 3<br/>score rises with proof"}
+    C3 -->|yes| P4["Phase 4<br/>Alan skill<br/>session and artifact"]
+    C3 -->|no| X3["Ship the grader<br/>and manual repair"]
+    X3 --> P4
+
+    P4 --> C4{"Checkpoint 4<br/>skill runs in a session"}
+    C4 -->|yes| P5["Phase 5<br/>Benchmark and demo<br/>before and after"]
+    C4 -->|no| X4["Record OpenCode<br/>and document Alan"]
+    X4 --> P5
+
+    P5 --> C5{"Checkpoint 5<br/>video and results ready"}
+    C5 -->|yes| P6["Phase 6<br/>Hardening and submission"]
+    C5 -->|no| X5["Ten functions<br/>and a shorter video"]
+    X5 --> P6
+
+    P6 --> C6{"Checkpoint 6<br/>fresh clone and submission"}
+    C6 -->|yes| DONE["Submit before 22:00 IST"]
+    C6 -->|no| X6["Submit the repo, video,<br/>and CLI"]
+    X6 --> DONE

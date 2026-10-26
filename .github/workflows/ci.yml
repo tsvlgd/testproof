@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Set Python
+        run: uv python install ${{ matrix.python-version }}
+      - name: Install
+        run: uv sync --locked
+      - name: Check
+        run: make check
+
+  full:
+    name: Full gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked
+      - name: Coverage
+        run: uv run pytest --cov=testproof --cov-fail-under=85
+      - name: Security
+        run: uv run bandit -q -r src -ll
+      - name: Build
+        run: uv build
