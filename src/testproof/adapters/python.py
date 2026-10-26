@@ -385,9 +385,8 @@ def _span(
     if segment != original and operator != "boolean":
         original = segment
 
-    # mypy cannot infer lineno attributes on the generic ast.AST base type.
-    # The nodes we pass here are concrete statement or expression nodes that
-    # do have these fields.
+    # Using Any to suppress mypy errors regarding AST node attributes.
+
     n: Any = node
 
     return _Candidate(

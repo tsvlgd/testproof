@@ -28,11 +28,11 @@ def run_tests(cmd: str, cwd: Path, timeout_seconds: int = 30) -> TestResult:
         return TestResult(
             killed=result.returncode != 0,
             timed_out=False,
-            output=result.stdout + result.stderr,
+            output=str(result.stdout) + str(result.stderr),
             duration_ms=duration_ms,
         )
     except subprocess.TimeoutExpired as exc:
-        output = (exc.stdout or "") + (exc.stderr or "")
+        output = str(exc.stdout or "") + str(exc.stderr or "")
         return TestResult(
             killed=False,
             timed_out=True,

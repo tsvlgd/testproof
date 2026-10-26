@@ -76,6 +76,7 @@ class RunInfo:
     started_at: str
     duration_ms: int
     base_ref: str | None
+    head_ref: str | None
     target: str
     merge_base: str | None
     test_command: str
