@@ -203,6 +203,104 @@ def test_grade_json_flag_is_supported(tmp_path: Path) -> None:
     assert json.loads(result.stdout)["run"]["all_files"] is True
 
 
+def test_grade_threshold_passes(tmp_path: Path) -> None:
+    fixture = Path(__file__).parents[1] / "fixtures" / "shop"
+    result = runner.invoke(
+        app,
+        [
+            "grade",
+            "--repo",
+            str(fixture),
+            "--all",
+            "--test-cmd",
+            "python -m pytest -q",
+            "--threshold",
+            "50",
+            "--format",
+            "json",
+        ],
+    )
+    assert result.exit_code == 0
+
+
+def test_grade_threshold_fails(tmp_path: Path) -> None:
+    fixture = Path(__file__).parents[1] / "fixtures" / "shop"
+    result = runner.invoke(
+        app,
+        [
+            "grade",
+            "--repo",
+            str(fixture),
+            "--all",
+            "--test-cmd",
+            "python -m pytest -q",
+            "--threshold",
+            "90",
+            "--format",
+            "json",
+        ],
+    )
+    assert result.exit_code == 1
+
+
+def test_grade_output_writes_file(tmp_path: Path) -> None:
+    fixture = Path(__file__).parents[1] / "fixtures" / "shop"
+    output = tmp_path / "report.json"
+    result = runner.invoke(
+        app,
+        [
+            "grade",
+            "--repo",
+            str(fixture),
+            "--all",
+            "--test-cmd",
+            "python -m pytest -q",
+            "--format",
+            "json",
+            "--output",
+            str(output),
+        ],
+    )
+    assert result.exit_code == 0
+    assert output.exists()
+    data = json.loads(output.read_text())
+    assert "summary" in data
+
+
+def test_report_command_renders_markdown(tmp_path: Path) -> None:
+    fixture = Path(__file__).parents[1] / "fixtures" / "shop"
+    # First generate a report
+    output = tmp_path / "report.json"
+    runner.invoke(
+        app,
+        [
+            "grade",
+            "--repo",
+            str(fixture),
+            "--all",
+            "--test-cmd",
+            "python -m pytest -q",
+            "--format",
+            "json",
+            "--output",
+            str(output),
+        ],
+    )
+    result = runner.invoke(
+        app,
+        [
+            "report",
+            "--input",
+            str(output),
+            "--format",
+            "markdown",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "TestProof Report" in result.stdout
+    assert "Score" in result.stdout
+
+
 def test_grade_all_without_mutation_points_returns_clear_error(tmp_path: Path) -> None:
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -214,7 +312,7 @@ def test_grade_all_without_mutation_points_returns_clear_error(tmp_path: Path) -
     )
 
     assert result.exit_code == 2
-    assert "no supported mutation points found" in result.stderr
+    assert "no supported mutation points found" in result.stdout
 
 
 def test_grade_invalid_repository_returns_two(tmp_path: Path) -> None:

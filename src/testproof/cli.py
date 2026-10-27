@@ -13,7 +13,7 @@ import typer
 from testproof import __version__
 from testproof.diff import ChangedFile, Diff, DiffError, resolve_diff
 from testproof.engine import MutationEngine
-from testproof.report import to_json
+from testproof.report import to_json, to_markdown
 
 app = typer.Typer(
     help="Grade whether a test suite catches bugs.",
@@ -145,9 +145,17 @@ def grade_command(
         typer.Option("--all", help="Grade all files instead of diff-scoped."),
     ] = False,
     output_format: Annotated[
-        Literal["json", "text"],
-        typer.Option("--format", help="Output format: text or json."),
+        Literal["json", "text", "markdown"],
+        typer.Option("--format", help="Output format: text, json, or markdown."),
     ] = "text",
+    threshold: Annotated[
+        float | None,
+        typer.Option("--threshold", help="Minimum mutation score to pass."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Write the report to a file."),
+    ] = None,
 ) -> None:
     """Grade whether a test suite catches bugs."""
 
@@ -216,7 +224,7 @@ def grade_command(
             base_ref = diff.base
             head_ref = diff.head
 
-        engine = MutationEngine(repo=repo, test_command=test_cmd)
+        engine = MutationEngine(repo=repo, test_command=test_cmd, threshold=threshold)
         report = engine.grade(
             target=target,
             base_ref=base_ref,
@@ -232,19 +240,102 @@ def grade_command(
         typer.secho(f"Error: {exc}", err=True, fg=typer.colors.RED)
         raise typer.Exit(code=2) from exc
 
-    if as_json or output_format == "json":
-        typer.echo(to_json(report))
-    elif report.summary.score is None:
-        typer.secho("Error: no score could be computed.", err=True, fg=typer.colors.RED)
-        for error in report.errors:
-            typer.secho(f"Error: {error}", err=True, fg=typer.colors.RED)
-        raise typer.Exit(code=2)
+    # Determine output content
+    if output_format == "json" or as_json:
+        content = to_json(report)
+    elif output_format == "markdown":
+        content = to_markdown(report)
+    else:
+        content = None
+
+    # Write to file if requested
+    if output is not None:
+        output.write_text(content if content is not None else to_json(report), encoding="utf-8")
+
+    # Print to stdout
+    if content is not None:
+        typer.echo(content)
     else:
         typer.echo(f"Score: {report.summary.score}")
         for error in report.errors:
             typer.echo(f"Notice: {error}")
         if report.summary.partial:
             typer.echo(f"Partial grade: {report.summary.reason}")
+
+    # Exit codes
+    if report.summary.score is None:
+        raise typer.Exit(code=2)
+    if threshold is not None and report.summary.score < threshold:
+        raise typer.Exit(code=1)
+
+
+@app.command("report")
+def report_command(
+    input: Annotated[
+        Path,
+        typer.Option(help="Input JSON report file."),
+    ],
+    format: Annotated[
+        Literal["json", "markdown", "text"],
+        typer.Option("--format", help="Output format."),
+    ] = "markdown",
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", help="Write output to a file."),
+    ] = None,
+) -> None:
+    """Render a report from a JSON file."""
+    from testproof.models import Report
+    from testproof.report import to_markdown
+
+    report_data = json.loads(input.read_text(encoding="utf-8"))
+    # Reconstruct a minimal Report for rendering
+    # For markdown, we just need the summary and files
+    if format == "markdown":
+        # Build a simplified report object
+        from testproof.models import (
+            FileReport,
+            Mutant,
+            MutationPoint,
+            RunInfo,
+            Summary,
+            ToolInfo,
+        )
+
+        run = RunInfo(**report_data["run"])
+        summary = Summary(**report_data["summary"])
+        files = []
+        for f in report_data["files"]:
+            mutants = []
+            for m in f["mutants"]:
+                point = MutationPoint(**m["point"])
+                mutants.append(
+                    Mutant(
+                        point=point,
+                        status=m["status"],
+                        duration_ms=m["duration_ms"],
+                        output=m["output"],
+                    )
+                )
+            files.append(FileReport(path=f["path"], score=f["score"], mutants=tuple(mutants)))
+        report = Report(
+            schema_version=report_data["schema_version"],
+            tool=ToolInfo(**report_data["tool"]),
+            run=run,
+            summary=summary,
+            files=tuple(files),
+            errors=tuple(report_data.get("errors", [])),
+        )
+        content = to_markdown(report)
+    elif format == "json":
+        content = json.dumps(report_data, indent=2)
+    else:
+        content = f"Score: {report_data['summary']['score']}"
+
+    if output is not None:
+        output.write_text(content, encoding="utf-8")
+    else:
+        typer.echo(content)
 
 
 if __name__ == "__main__":

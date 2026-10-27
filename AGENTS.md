@@ -54,7 +54,7 @@ make check-full
 - No unimplemented stubs. No skipped tests. No weakened constraints.
 - No secrets in source, logs, reports, or test fixtures.
 - Every phase ends with a runnable command, tests, and a checkpoint note.
-- Commit after each phase with a conventional commit message.
+- Commit after each phase or if there's important checkpoint of major change or refactor or feature additions within a phase comes in that aslo to be commited or pushed don't wait for the phase to be completed or pusehd with a conventional commit message.
 
 ## Project structure
 

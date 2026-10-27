@@ -1,25 +1,39 @@
-name: TestProof preview
-
-# Phase 2 replaces this manual preview with the real grade gate.
-# It is manual now because the mutation engine is not implemented yet.
+name: TestProof
 
 on:
-  workflow_dispatch:
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
+  pull-requests: write
+  checks: write
 
 jobs:
-  diff:
+  testproof:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
+      - name: Grade test strength
+        run: |
+          uvx testproof grade \
+            --base "origin/${{ github.base_ref }}" \
+            --head HEAD \
+            --test-cmd "pytest -q" \
+            --threshold 80 \
+            --format json \
+            --output testproof.json
+      - name: Render markdown
+        if: always()
+        run: uvx testproof report --input testproof.json --format markdown --output testproof.md
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          enable-cache: true
-      - name: Install
-        run: uv sync --locked
-      - name: Show changed files
-        run: uv run testproof diff --base origin/main --head HEAD
+          name: testproof-report
+          path: |
+            testproof.json
+            testproof.md
