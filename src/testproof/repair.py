@@ -140,6 +140,19 @@ class RepairEngine:
         with Sandbox(self._repo).create() as workspace:
             # Write candidate test to temp file
             test_file = workspace / f"test_repair_{test_id.replace('-', '_')}.py"
+            # Ensure imports are present
+            if "import" not in candidate and "from " not in candidate:
+                # Try to extract imports from existing test file
+                test_path = self._find_test_file(file_path)
+                if test_path is not None and test_path.exists():
+                    existing = test_path.read_text(encoding="utf-8")
+                    imports = [
+                        line
+                        for line in existing.splitlines()
+                        if line.startswith("import ") or line.startswith("from ")
+                    ]
+                    if imports:
+                        candidate = "\n".join(imports) + "\n\n" + candidate
             test_file.write_text(candidate, encoding="utf-8")
 
             # 1. Run on original code - must pass
