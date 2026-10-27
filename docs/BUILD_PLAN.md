@@ -57,7 +57,7 @@ Checkpoint 1 progress note, 2026-10-27:
 - Fixture result: 8 killed, 1 survived, 0 invalid, 0 timed out, score 88.9 percent, not partial, high confidence. The survivor is `shipping.py:6`, `>=` to `>`.
 - Repeated runs produce the same nine mutant IDs and score. Durations and timestamps are intentionally variable.
 - The sandbox copies to a temporary directory and the tests confirm the source fixture remains unchanged.
-- This is a local checkpoint candidate. Commit and push it only after final diff review and rerunning the acceptance commands.
+- Commit `5ccc6ef` (`feat: complete Phase 1 deterministic engine and tests`) is pushed to the private GitHub repository on `master`.
 
 ## Phase 0: Foundation
 
@@ -126,7 +126,7 @@ Cut line: if the diff parser is slow, keep the commit mode and support tracked w
 
 ## Phase 1: Deterministic engine
 
-Status: implementation and acceptance gates pass locally as of 2026-10-27. The Phase 1 checkpoint is ready for commit and push after this note is reviewed.
+Status: implementation and acceptance gates pass as of 2026-10-27. Phase 1 checkpoint `5ccc6ef` is committed and pushed to `origin/master`.
 
 Goal: grade a Python file and produce a reproducible score with survivors.
 

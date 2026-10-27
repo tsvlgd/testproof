@@ -63,7 +63,7 @@ If a rule is unclear, ask in the OpenFire Discord before spending build time. Th
 
 ## What exists today
 
-Phase 0 is complete. The Phase 1 deterministic engine is implemented and its local acceptance gates pass. Phase 2 reporting and CI gating, Phase 3 verified repair, and the Alan workflow remain planned.
+Phase 0 is complete. The Phase 1 deterministic engine and its acceptance gates are complete at pushed commit `5ccc6ef`. Phase 2 reporting and CI gating, Phase 3 verified repair, and the Alan workflow remain planned.
 
 | Area | Status | Where |
 | --- | --- | --- |
@@ -96,7 +96,7 @@ The project has a local commit history and a private GitHub repository at `https
 | Phase | Goal | Main output | Gate | Status |
 | --- | --- | --- | --- | --- |
 | 0 Foundation | A repo that runs, a weak fixture, and a diff resolver | CLI, diff resolver, tests, fixture, CI | `make check` green | Complete after the diff fix |
-| 1 Deterministic engine | Grade Python changes and produce a reproducible score | Adapter, sandbox, runner, engine, score, JSON | Same input, same score | Local acceptance gates pass; ready for checkpoint commit |
+| 1 Deterministic engine | Grade Python changes and produce a reproducible score | Adapter, sandbox, runner, engine, score, JSON | Same input, same score | Complete and pushed at `5ccc6ef` |
 | 2 Report and CI gate | Turn the score into a pull request gate | Markdown, threshold, exit codes, GitHub Action | Pull request fails below threshold | Planned |
 | 3 Verified repair | Let an open model write missing tests and prove each kill | Model client, prompt, verifier, apply | Score rises with verified tests | Planned |
 | 4 Alan skill and workflow | Make the tool usable in a real Alan session | Skill, automation recipe, artifact, recording | Skill runs end to end | Planned |
