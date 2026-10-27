@@ -163,21 +163,21 @@ The fixture is not a git repository, so the fixture acceptance uses `--all`. The
 Acceptance:
 
 ```bash
-uv run testproof grade --repo fixtures/shop --all --test-cmd "pytest -q" --format json
+uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" --format json
 uv run pytest tests/test_engine.py tests/test_determinism.py -q
-make check
+make check-full
 ```
 
 Expected fixture result:
 
 - One survivor: the `>=` to `>` boundary mutant.
 - Score below 100 percent.
-- The report lists the survivor at line 2 with `>=` and `>`.
+- The report lists the survivor at line 6 with `>=` and `>`.
 
 Checkpoint 1:
 
 - The grade command produces a score.
-- Two runs produce identical JSON excluding timestamps and durations.
+- Two runs produce identical scores and mutant IDs. The comparison also confirms report fields are stable apart from timestamps, durations, and pytest output timing.
 - The working tree hash is unchanged.
 - If the adapter is not working by 19:30, cut arithmetic and constant operators. Keep comparison, boolean, and return.
 
