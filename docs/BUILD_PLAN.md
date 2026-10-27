@@ -36,7 +36,7 @@ gantt
 
 ## Current build status
 
-Phase 0 is complete in this repository. `make check` passes, coverage is 86.98 percent, the fixture tests pass, and the Mermaid sources render. The mutation engine, the repair loop, and the GitHub gate are not implemented yet. They are the next phases below.
+Phase 0 is complete and pushed to the private GitHub repository. Phase 1 implementation and acceptance tests now pass locally. This checkpoint records the evidence and is ready to commit and push as the Phase 1 milestone.
 
 Checkpoint 0 note:
 
@@ -44,10 +44,20 @@ Checkpoint 0 note:
 - `uv run testproof diff` compares `HEAD` to the working tree, including staged and untracked files.
 - `uv run testproof diff --base HEAD~1` includes the previous commit plus the working tree.
 - `uv run testproof diff --base origin/main --head HEAD` compares committed revisions only.
-- `make check-full` is green: 24 tests, 86.98 percent coverage, security clean, fixture green.
+- The Phase 0 `make check-full` was green at its checkpoint: 24 tests, 86.98 percent coverage, security clean, fixture green.
 - The diff resolver uses the merge base and marks the worktree target as `WORKTREE` in JSON.
 
 The first diff resolver compared commits only. It was corrected before Phase 1 because the mutation engine must grade the same change set a user sees locally and in CI.
+
+Checkpoint 1 progress note, 2026-10-27:
+
+- Added tests for sandbox isolation, runner outcome and timeout handling, engine scoring and error paths, CLI all files and diff scoped modes, and repeated run determinism.
+- `make check-full` passes locally: 68 tests, 87.93 percent coverage, Bandit clean, fixture tests pass.
+- Fixture command: `uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" --format json`.
+- Fixture result: 8 killed, 1 survived, 0 invalid, 0 timed out, score 88.9 percent, not partial, high confidence. The survivor is `shipping.py:6`, `>=` to `>`.
+- Repeated runs produce the same nine mutant IDs and score. Durations and timestamps are intentionally variable.
+- The sandbox copies to a temporary directory and the tests confirm the source fixture remains unchanged.
+- This is a local checkpoint candidate. Commit and push it only after final diff review and rerunning the acceptance commands.
 
 ## Phase 0: Foundation
 
@@ -116,11 +126,13 @@ Cut line: if the diff parser is slow, keep the commit mode and support tracked w
 
 ## Phase 1: Deterministic engine
 
+Status: implementation and acceptance gates pass locally as of 2026-10-27. The Phase 1 checkpoint is ready for commit and push after this note is reviewed.
+
 Goal: grade a Python file and produce a reproducible score with survivors.
 
 Deliverables:
 
-- `src/testproof/cli.py` with `grade --all` for a standalone fixture and a full repository run. The default remains diff scoped.
+- `src/testproof/cli.py` with `grade --all` for a standalone fixture and an explicit full repository run. The default remains diff scoped.
 - `src/testproof/models.py` with `MutationPoint`, `Mutant`, `FileReport`, `Summary`, `Report`.
 - `src/testproof/adapters/base.py` with the adapter protocol.
 - `src/testproof/adapters/python.py` with the operator set.

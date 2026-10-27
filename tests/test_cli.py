@@ -113,6 +113,120 @@ def test_diff_command_head_mode_ignores_worktree(tmp_path: Path) -> None:
     assert "No changed files." in result.stdout
 
 
+def test_grade_all_fixture_emits_report_and_marks_all_mode() -> None:
+    fixture = Path(__file__).parents[1] / "fixtures" / "shop"
+
+    result = runner.invoke(
+        app,
+        [
+            "grade",
+            "--repo",
+            str(fixture),
+            "--all",
+            "--test-cmd",
+            "python -m pytest -q",
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["run"]["all_files"] is True
+    assert payload["summary"]["survived"] >= 1
+
+
+def test_grade_defaults_to_diff_scoped_and_only_mutates_changed_lines(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "--quiet")
+    _git(repo, "config", "user.name", "TestProof")
+    _git(repo, "config", "user.email", "testproof@example.com")
+    (repo / "shipping.py").write_text(
+        "def shipping_fee(total: int) -> int:\n"
+        "    if total >= 50:\n"
+        "        return 0\n"
+        "    return 5\n",
+        encoding="utf-8",
+    )
+    (repo / "test_shipping.py").write_text(
+        "from shipping import shipping_fee\n\n"
+        "def test_shipping():\n"
+        "    assert shipping_fee(100) == 0\n"
+        "    assert shipping_fee(10) == 5\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", ".")
+    _git(repo, "commit", "--quiet", "-m", "initial")
+    (repo / "shipping.py").write_text(
+        (repo / "shipping.py").read_text(encoding="utf-8").replace(">=", ">"),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "grade",
+            "--repo",
+            str(repo),
+            "--test-cmd",
+            "python -m pytest -q",
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["run"]["all_files"] is False
+    assert payload["summary"]["total"] == 1
+    assert payload["files"][0]["path"] == "shipping.py"
+    assert payload["files"][0]["mutants"][0]["point"]["line"] == 2
+
+
+def test_grade_json_flag_is_supported(tmp_path: Path) -> None:
+    fixture = Path(__file__).parents[1] / "fixtures" / "shop"
+    result = runner.invoke(
+        app,
+        [
+            "grade",
+            "--repo",
+            str(fixture),
+            "--all",
+            "--test-cmd",
+            "python -m pytest -q",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert json.loads(result.stdout)["run"]["all_files"] is True
+
+
+def test_grade_all_without_mutation_points_returns_clear_error(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "module.py").write_text("VALUE = 42\n", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["grade", "--repo", str(repo), "--all", "--test-cmd", "python -c pass"],
+    )
+
+    assert result.exit_code == 2
+    assert "no supported mutation points found" in result.stderr
+
+
+def test_grade_invalid_repository_returns_two(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["grade", "--repo", str(tmp_path), "--test-cmd", "python -m pytest -q"],
+    )
+
+    assert result.exit_code == 2
+    assert "git repository" in result.stderr
+
+
 def test_diff_command_returns_two_on_error(tmp_path: Path) -> None:
     result = runner.invoke(app, ["diff", "--base", "HEAD", "--repo", str(tmp_path)])
 

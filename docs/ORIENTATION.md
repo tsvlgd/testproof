@@ -63,7 +63,7 @@ If a rule is unclear, ask in the OpenFire Discord before spending build time. Th
 
 ## What exists today
 
-The repository is a Phase 0 scaffold plus a corrected diff resolver. It is honest about what is missing.
+Phase 0 is complete. The Phase 1 deterministic engine is implemented and its local acceptance gates pass. Phase 2 reporting and CI gating, Phase 3 verified repair, and the Alan workflow remain planned.
 
 | Area | Status | Where |
 | --- | --- | --- |
@@ -75,13 +75,13 @@ The repository is a Phase 0 scaffold plus a corrected diff resolver. It is hones
 | Alan, CI, and local flows | Complete draft | `docs/WORKFLOW.md` |
 | Agent skill | Drafted | `skills/testproof/SKILL.md` |
 | Weak demonstration fixture | Working | `fixtures/shop/` |
-| CLI version command | Working | `src/testproof/cli.py` |
+| CLI version, diff, and grade commands | Working | `src/testproof/cli.py` |
 | Diff resolver | Working, worktree and commit modes | `src/testproof/diff.py` |
-| Unit tests | 24 passing | `tests/` |
+| Unit tests | 68 passing at Phase 1 checkpoint | `tests/` |
 | CI | Lint, types, tests, coverage, security, build | `.github/workflows/ci.yml` |
-| Mutation engine | Not built | Phase 1 |
-| Sandbox and test runner | Not built | Phase 1 |
-| Score and JSON report | Not built | Phase 1 |
+| Mutation engine | Implemented and fixture verified | `src/testproof/engine.py` |
+| Sandbox and test runner | Implemented and tested | `src/testproof/sandbox.py`, `src/testproof/runner.py` |
+| Score and JSON report | Implemented | `src/testproof/models.py`, `src/testproof/report.py` |
 | Markdown report and threshold | Not built | Phase 2 |
 | GitHub Action | Not built | Phase 2 |
 | Model client and verifier | Not built | Phase 3 |
@@ -89,14 +89,14 @@ The repository is a Phase 0 scaffold plus a corrected diff resolver. It is hones
 | Static report viewer | Not built | Phase 5, optional |
 | Remote MCP server and marketplace plugin | Roadmap | After the hackathon |
 
-The project is not a git repository yet. There is no commit history. That is a structural gap for a submission that requires a public GitHub repo. Initializing git and making the first commit is a sensible next step, but it has not been done.
+The project has a local commit history and a private GitHub repository at `https://github.com/tsvlgd/testproof`. The private setting reflects the user's current preference. Change it to public only if a release or event submission requires it.
 
 ## Phase map
 
 | Phase | Goal | Main output | Gate | Status |
 | --- | --- | --- | --- | --- |
 | 0 Foundation | A repo that runs, a weak fixture, and a diff resolver | CLI, diff resolver, tests, fixture, CI | `make check` green | Complete after the diff fix |
-| 1 Deterministic engine | Grade a Python file and produce a reproducible score | Adapter, sandbox, runner, engine, score, JSON | Same input, same score | Next |
+| 1 Deterministic engine | Grade Python changes and produce a reproducible score | Adapter, sandbox, runner, engine, score, JSON | Same input, same score | Local acceptance gates pass; ready for checkpoint commit |
 | 2 Report and CI gate | Turn the score into a pull request gate | Markdown, threshold, exit codes, GitHub Action | Pull request fails below threshold | Planned |
 | 3 Verified repair | Let an open model write missing tests and prove each kill | Model client, prompt, verifier, apply | Score rises with verified tests | Planned |
 | 4 Alan skill and workflow | Make the tool usable in a real Alan session | Skill, automation recipe, artifact, recording | Skill runs end to end | Planned |
@@ -161,27 +161,27 @@ The resolver also includes untracked text files, respects `.gitignore`, skips bi
 
 ## Current state and next step
 
-The Phase 0 gate is green:
+Phase 0 is complete. Phase 1's local acceptance gates now pass:
 
 ```text
-24 tests passing
-87 percent coverage
+68 tests passing
+87.93 percent coverage
 make check-full green
-uv build succeeds
+fixture grade: 8 killed, 1 survived, 88.9 percent
+repeated fixture runs: same score and mutant IDs
 ```
 
-The next phase is Phase 1, the deterministic engine. Its acceptance command is:
+The fixture acceptance command is:
 
 ```bash
-uv run testproof grade --repo fixtures/shop --all --test-cmd "pytest -q" --format json
+uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" --format json
 ```
 
-That command does not exist yet. Phase 1 adds the Python adapter, sandbox, runner, classifier, score, and JSON report. The fixture is not a git repository, so the fixture run uses the opt in `--all` mode. The diff scoped path stays the default for real repositories. The first expected result is one survivor on the `>=` boundary in `fixtures/shop/shipping.py`, a score below 100 percent, and the same score on a second run.
+`fixtures/shop` is a tiny example repository containing shipping code and deliberately weak tests. It has no Git history of its own, so `--all` asks the engine to grade every supported Python file there instead of asking Git for changed lines. For a normal Git repository, omit `--all`: TestProof resolves the Git diff and grades only changed Python lines by default. `--all` can also be used explicitly for a full repository audit, but that can be slow and is never the default.
 
-Before Phase 1, two housekeeping items matter:
+The known survivor is the boundary mutation `>=` to `>` on `shipping.py:6`. That means the existing tests miss the exact free shipping threshold. It is useful fixture evidence, not proof that TestProof catches every real bug.
 
-1. Initialize git and make the first commit. The project is currently outside version control.
-2. Read `CONSTRAINTS.md` and `docs/BUILD_PLAN.md` before editing. The next phase has a five hour budget and a cut line.
+Next is Phase 2: Markdown reporting, threshold handling and exit codes, and the GitHub Actions pull request gate. Then Phase 3 builds verified repair with an open model, followed by completing the agent workflow, benchmark, and release work. See `docs/BUILD_PLAN.md` for the gates and checkpoints.
 
 ## Reading order
 

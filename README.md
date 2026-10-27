@@ -55,14 +55,14 @@ The mutation engine is deterministic. No model call happens in discovery, execut
 
 | Surface | Purpose | Status |
 | --- | --- | --- |
-| `testproof` CLI | Grade a repository and repair survivors | Phase 0 scaffold |
+| `testproof` CLI | Grade changed code and emit a JSON report | Phase 1 deterministic engine |
 | `skills/testproof/SKILL.md` | Teach an agent when and how to run the loop | Drafted |
 | GitHub Action | Gate a pull request on test strength | Planned for Phase 2 |
 | Report schema | Shared contract for every surface | Specified |
 | Static report viewer | Demo surface for the hackathon video | Planned for Phase 5 |
 | Remote MCP server | Alan marketplace plugin | Roadmap |
 
-The current repository contains the full blueprint and the Phase 0 foundation: packaging, a real git diff resolver, tests, a weak fixture, the agent skill, and CI. The mutation engine and repair loop are the next phases in `docs/BUILD_PLAN.md`. This is stated plainly so nobody mistakes the scaffold for a finished grader.
+The current repository contains the Phase 0 foundation and the Phase 1 deterministic Python engine: packaging, Git diff resolution, mutation adapter, isolated sandbox, bounded test runner, scoring, JSON reports, and acceptance tests. Markdown reports, threshold gating, and the GitHub Action are next in Phase 2. Verified repair with an open model is planned for Phase 3. This status is explicit so nobody mistakes the engine for a finished repair product.
 
 ## Quick start
 
@@ -88,12 +88,15 @@ uv run testproof diff --base origin/main --head HEAD --repo /path/to/repo
 
 `testproof diff` is not a `git status` clone. It resolves a change set from a base to a target, and the base decides what is included. The output names both sides so the comparison is explicit. In JSON, the working tree target is the string `WORKTREE`.
 
-The demonstration fixture is intentionally weak. Its tests pass with full line coverage and still miss the boundary at 50.
+The demonstration fixture is intentionally weak. Its tests pass with full line coverage and still miss the boundary at 50. It is not its own Git repository, so use `--all` to grade its Python files. In normal Git repositories, grading stays diff scoped by default.
 
 ```bash
 cd fixtures/shop
 python -m pytest -q
 python -m pytest --cov=. --cov-report=term-missing
+
+cd ../..
+uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" --format json
 ```
 
 ## Repository layout
@@ -136,15 +139,15 @@ testproof/
 
 | Phase | Output | Gate |
 | --- | --- | --- |
-| 0 Foundation | Repo, CLI, diff resolver, fixture, CI | `make check` green |
-| 1 Deterministic engine | Mutation, sandbox, runner, score, JSON | Same input, same score |
+| 0 Foundation | Repo, CLI, diff resolver, fixture, CI | Complete |
+| 1 Deterministic engine | Mutation, sandbox, runner, score, JSON | Complete at Phase 1 checkpoint |
 | 2 Report and CI gate | Markdown, threshold, GitHub Action | Pull request fails below threshold |
 | 3 Verified repair | Model client, verifier, apply | Score rises with verified tests |
 | 4 Alan skill | Skill, automation recipe, artifact | Runs in a real session |
 | 5 Benchmark and demo | Corpus, metrics, README, video | Before and after are measurable |
 | 6 Hardening | Errors, license, release, submission | Fresh clone works |
 
-Phase 0 is complete after the diff resolver fix: 24 tests pass, coverage is 86.98 percent, and `make check-full` is green. The mutation engine is the next phase.
+Phase 0 and Phase 1 are complete at the current checkpoint. `make check-full` passes with 68 tests and 87.93 percent coverage. The fixture grade is reproducible: 8 mutants are killed, 1 boundary mutant survives, for a score of 88.9 percent. Phase 2, the Markdown report and CI threshold gate, is next.
 
 The full gate for each phase is in `docs/BUILD_PLAN.md`.
 

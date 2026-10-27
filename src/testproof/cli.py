@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import typer
 
@@ -142,43 +142,69 @@ def grade_command(
         bool,
         typer.Option("--all", help="Grade all files instead of diff-scoped."),
     ] = False,
+    output_format: Annotated[
+        Literal["json", "text"],
+        typer.Option("--format", help="Output format: text or json."),
+    ] = "text",
 ) -> None:
     """Grade whether a test suite catches bugs."""
 
-    if all_files:
-        changed_files: list[tuple[str, set[int] | None]] = []
-        for path in repo.rglob("*.py"):
-            changed_files.append((str(path.relative_to(repo)), None))
-        target = "WORKTREE"
-        merge_base = None
-        base_ref = None
-        head_ref = None
-    else:
-        diff = resolve_diff(repo=repo, base=base, head=head)
-        changed_files = []
-        for changed in diff.files:
-            line_set = None
-            if changed.lines:
-                line_set = {ln for rng in changed.lines for ln in range(rng.start, rng.end + 1)}
-            changed_files.append((changed.path, line_set))
-        target = "HEAD" if head is not None and head != "WORKTREE" else "WORKTREE"
-        merge_base = None
-        base_ref = diff.base
-        head_ref = diff.head
+    try:
+        if all_files:
+            repo = repo.resolve()
+            changed_files: list[tuple[str, set[int] | None]] = []
+            excluded = {".git", ".venv", "__pycache__"}
+            for path in repo.rglob("*.py"):
+                relative = path.relative_to(repo)
+                if excluded.intersection(relative.parts):
+                    continue
+                changed_files.append((relative.as_posix(), None))
+            target = "WORKTREE"
+            merge_base = None
+            base_ref = None
+            head_ref = None
+        else:
+            diff = resolve_diff(repo=repo, base=base, head=head)
+            changed_files = []
+            for changed in diff.files:
+                line_set = None
+                if changed.lines:
+                    line_set = {ln for rng in changed.lines for ln in range(rng.start, rng.end + 1)}
+                changed_files.append((changed.path, line_set))
+            target = "HEAD" if head is not None and head != "WORKTREE" else "WORKTREE"
+            merge_base = None
+            base_ref = diff.base
+            head_ref = diff.head
 
-    engine = MutationEngine(repo=repo, test_command=test_cmd)
-    report = engine.grade(
-        target=target,
-        base_ref=base_ref,
-        head_ref=head_ref,
-        merge_base=merge_base,
-        changed_files=changed_files,
-    )
+        engine = MutationEngine(repo=repo, test_command=test_cmd)
+        report = engine.grade(
+            target=target,
+            base_ref=base_ref,
+            head_ref=head_ref,
+            merge_base=merge_base,
+            changed_files=changed_files,
+            all_files=all_files,
+        )
+    except DiffError as exc:
+        typer.secho(f"Error: {exc}", err=True, fg=typer.colors.RED)
+        raise typer.Exit(code=2) from exc
+    except (OSError, RuntimeError, ValueError) as exc:
+        typer.secho(f"Error: {exc}", err=True, fg=typer.colors.RED)
+        raise typer.Exit(code=2) from exc
 
-    if as_json:
+    if as_json or output_format == "json":
         typer.echo(to_json(report))
+    elif report.summary.score is None:
+        typer.secho("Error: no score could be computed.", err=True, fg=typer.colors.RED)
+        for error in report.errors:
+            typer.secho(f"Error: {error}", err=True, fg=typer.colors.RED)
+        raise typer.Exit(code=2)
     else:
         typer.echo(f"Score: {report.summary.score}")
+        for error in report.errors:
+            typer.echo(f"Notice: {error}")
+        if report.summary.partial:
+            typer.echo(f"Partial grade: {report.summary.reason}")
 
 
 if __name__ == "__main__":

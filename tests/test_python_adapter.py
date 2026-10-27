@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import ast
 
+import pytest
+
 from testproof.adapters.python import PythonAdapter
 
 ADAPTER = PythonAdapter()
@@ -72,6 +74,20 @@ def test_discovery_skips_equivalent_arithmetic() -> None:
     assert "return" in operators
 
 
+def test_discovery_skips_non_equivalent_arithmetic() -> None:
+    source = "def adjust(value: int) -> int:\n    return value + 2\n"
+    points = ADAPTER.discover("adjust.py", source, None)
+
+    assert any(point.operator == "arithmetic" for point in points)
+
+
+def test_discovery_finds_boolean_operator() -> None:
+    source = "def check(left: bool, right: bool) -> bool:\n    return left and right\n"
+    points = ADAPTER.discover("check.py", source, {2})
+
+    assert any(point.operator == "boolean" for point in points)
+
+
 def test_discovery_ids_are_stable() -> None:
     first = ADAPTER.discover("shipping.py", SHIPPING, None)
     second = ADAPTER.discover("shipping.py", SHIPPING, None)
@@ -89,6 +105,42 @@ def test_apply_splices_only_the_operator() -> None:
     assert "if order_total > 50 and not member:" in mutated
     assert mutated.replace("> 50", ">= 50", 1) == SHIPPING
     assert ADAPTER.validate(mutated)
+
+
+def test_discovery_returns_no_points_for_invalid_syntax() -> None:
+    assert ADAPTER.discover("broken.py", "def broken(:\n    pass\n", None) == []
+
+
+def test_discovery_deduplicates_repeated_ast_candidates() -> None:
+    source = "def value(flag: bool):\n    return not flag\n"
+    points = ADAPTER.discover("value.py", source, None)
+
+    assert len(points) == len({point.id for point in points})
+
+
+def test_apply_rejects_out_of_range_mutation_point() -> None:
+    point = ADAPTER.discover("shipping.py", SHIPPING, None)[0]
+    invalid_point = type(point)(
+        id=point.id,
+        path=point.path,
+        line=999,
+        column=point.column,
+        end_line=999,
+        end_column=point.end_column,
+        operator=point.operator,
+        original=point.original,
+        replacement=point.replacement,
+    )
+
+    with pytest.raises(ValueError, match="outside"):
+        ADAPTER.apply(SHIPPING, invalid_point)
+
+
+def test_apply_rejects_stale_mutation_point() -> None:
+    point = ADAPTER.discover("shipping.py", SHIPPING, None)[0]
+
+    with pytest.raises(ValueError, match="expected"):
+        ADAPTER.apply(SHIPPING.replace(">=", "<="), point)
 
 
 def test_validate_rejects_broken_syntax() -> None:
