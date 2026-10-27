@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -15,9 +17,21 @@ class ModelConfig:
 
     api_key: str
     base_url: str = "https://openrouter.ai/api/v1"
-    model: str = "meta-llama/llama-3.1-8b-instruct"
+    model: str = "qwen/qwen-2.5-coder-32b-instruct"
     max_tokens: int = 500
     temperature: float = 0.0
+
+    @classmethod
+    def from_file(cls, path: Path) -> ModelConfig:
+        """Load config from a JSON file."""
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return cls(
+            api_key=data.get("api_key", ""),
+            base_url=data.get("base_url", "https://openrouter.ai/api/v1"),
+            model=data.get("model", "qwen/qwen-2.5-coder-32b-instruct"),
+            max_tokens=data.get("max_tokens", 500),
+            temperature=data.get("temperature", 0.0),
+        )
 
 
 class ModelClient:
@@ -62,12 +76,39 @@ class ModelClient:
 
     @classmethod
     def from_env(cls) -> ModelClient:
-        """Create a client from environment variables."""
+        """Create a client from environment variables or a config file.
+
+        Checks in order:
+        1. MODEL_API_KEY environment variable
+        2. ~/.config/testproof/model.json
+        3. .testproof/model.json in the current directory
+        """
         api_key = os.environ.get("MODEL_API_KEY", "")
+        base_url = os.environ.get("MODEL_BASE_URL", "")
+        model = os.environ.get("MODEL_NAME", "")
+
         if not api_key:
-            msg = "MODEL_API_KEY environment variable is required"
+            config_paths = [
+                Path.home() / ".config" / "testproof" / "model.json",
+                Path(".testproof") / "model.json",
+            ]
+            for config_path in config_paths:
+                if config_path.exists():
+                    config = ModelConfig.from_file(config_path)
+                    if config.api_key:
+                        return cls(config)
+
+        if not api_key:
+            msg = (
+                "MODEL_API_KEY environment variable is required, or create "
+                "~/.config/testproof/model.json with "
+                '{\\"api_key\\": \\"...\\", \\"base_url\\": \\"...\\", \\"model\\": \\"...\\"}'
+            )
             raise RuntimeError(msg)
-        base_url = os.environ.get("MODEL_BASE_URL", "https://openrouter.ai/api/v1")
-        model = os.environ.get("MODEL_NAME", "meta-llama/llama-3.1-8b-instruct")
-        config = ModelConfig(api_key=api_key, base_url=base_url, model=model)
+
+        config = ModelConfig(
+            api_key=api_key,
+            base_url=base_url or "https://openrouter.ai/api/v1",
+            model=model or "qwen/qwen-2.5-coder-32b-instruct",
+        )
         return cls(config)

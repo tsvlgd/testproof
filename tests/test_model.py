@@ -10,7 +10,7 @@ from testproof.model import ModelClient, ModelConfig
 def test_model_config_defaults() -> None:
     config = ModelConfig(api_key="test-key")
     assert config.base_url == "https://openrouter.ai/api/v1"
-    assert config.model == "meta-llama/llama-3.1-8b-instruct"
+    assert config.model == "qwen/qwen-2.5-coder-32b-instruct"
     assert config.max_tokens == 500
     assert config.temperature == 0.0
 
