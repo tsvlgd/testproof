@@ -40,7 +40,10 @@ diff resolver  ->  Python adapter  ->  sandbox  ->  project test command
                                                score and report
                                                         |
                                                         v
-                                     open source model proposes a test
+                                 deterministic probe and test templates
+                                                        |
+                                                        v
+                                         open model fallback when needed
                                                         |
                                                         v
                                   verifier: pass on original, fail on mutant
@@ -49,20 +52,22 @@ diff resolver  ->  Python adapter  ->  sandbox  ->  project test command
                                             keep the test or reject it
 ```
 
-The mutation engine is deterministic. No model call happens in discovery, execution, classification, or scoring. The model only proposes tests, and the verifier decides what is kept.
+The mutation engine is deterministic. No model call happens in discovery, execution, classification, or scoring. Repair builds candidate inputs from the mutation and proves them by running the original and the mutant in an isolated interpreter. The model is a fallback for survivors that templates cannot handle. The verifier decides what is kept.
 
 ## What ships
 
 | Surface | Purpose | Status |
 | --- | --- | --- |
-| `testproof` CLI | Grade changed code and emit a JSON report | Phase 1 deterministic engine |
-| `skills/testproof/SKILL.md` | Teach an agent when and how to run the loop | Drafted |
-| GitHub Action | Gate a pull request on test strength | Planned for Phase 2 |
-| Report schema | Shared contract for every surface | Specified |
+| `testproof` CLI | Grade changed code and repair survivors | Working |
+| `skills/testproof/SKILL.md` | Teach an agent when and how to run the loop | Drafted, final pass in Phase 4 |
+| GitHub Action | Gate a pull request on test strength | Working |
+| Report schema | Shared contract for every surface | Working |
 | Static report viewer | Demo surface for the hackathon video | Planned for Phase 5 |
 | Remote MCP server | Alan marketplace plugin | Roadmap |
 
-The current repository contains the Phase 0 foundation and the Phase 1 deterministic Python engine: packaging, Git diff resolution, mutation adapter, isolated sandbox, bounded test runner, scoring, JSON reports, and acceptance tests. Markdown reports, threshold gating, and the GitHub Action are next in Phase 2. Verified repair with an open model is planned for Phase 3. This status is explicit so nobody mistakes the engine for a finished repair product.
+The current repository contains the deterministic Python engine, Markdown and JSON reports, threshold gating, the GitHub Action, and verified repair. Repair runs deterministic templates first and falls back to an open source model. Every kept test is verified in a sandbox: it must pass on the original code, fail on the mutant, and leave the full suite green.
+
+Real repository evidence: a three module repository with 19 mutants moved from 36.84 percent to 89.47 percent after repair. The engine kept 10 tests with deterministic templates and made no model calls. The two remaining survivors are clamp comparisons that no valid input can distinguish, so they are marked likely equivalent.
 
 ## Quick start
 
@@ -98,6 +103,32 @@ python -m pytest --cov=. --cov-report=term-missing
 cd ../..
 uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" --format json
 ```
+
+Grade a real repository diff, then repair the survivors:
+
+```bash
+uv run testproof grade \
+  --repo /path/to/repo \
+  --base origin/main \
+  --test-cmd "pytest -q" \
+  --threshold 80 \
+  --format json \
+  --output .testproof/report.json
+
+uv run testproof repair \
+  --repo /path/to/repo \
+  --report .testproof/report.json \
+  --test-cmd "pytest -q" \
+  --dry-run
+
+uv run testproof repair \
+  --repo /path/to/repo \
+  --report .testproof/report.json \
+  --test-cmd "pytest -q" \
+  --apply
+```
+
+Repair uses deterministic templates by default and does not need a model key. To enable the model fallback, set `MODEL_API_KEY` or create `~/.config/testproof/model.json`. The model is only asked when templates cannot produce a killing input. The default model is `qwen/qwen3-235b-a22b-2507`, measured in `docs/MODEL_BENCHMARK.md`. Use `--model` to override the configured model and `--force-model` to ask the model even when the probe suggests a mutant is equivalent.
 
 ## Repository layout
 
@@ -137,17 +168,18 @@ testproof/
 
 ## Build status
 
-| Phase | Output | Gate |
-| --- | --- | --- |
-| 0 Foundation | Repo, CLI, diff resolver, fixture, CI | Complete |
-| 1 Deterministic engine | Mutation, sandbox, runner, score, JSON | Complete at Phase 1 checkpoint |
-| 2 Report and CI gate | Markdown, threshold, GitHub Action | Pull request fails below threshold |
-| 3 Verified repair | Model client, verifier, apply | Score rises with verified tests |
-| 4 Alan skill | Skill, automation recipe, artifact | Runs in a real session |
-| 5 Benchmark and demo | Corpus, metrics, README, video | Before and after are measurable |
-| 6 Hardening | Errors, license, release, submission | Fresh clone works |
+| Phase | Output | Gate | Status |
+| --- | --- | --- | --- |
+| 0 Foundation | Repo, CLI, diff resolver, fixture, CI | Complete | Complete |
+| 1 Deterministic engine | Mutation, sandbox, runner, score, JSON | Complete at Phase 1 checkpoint | Complete |
+| 2 Report and CI gate | Markdown, threshold, GitHub Action | Pull request fails below threshold | Complete |
+| 3 Verified repair | Model client, verifier, apply | Score rises with verified tests | Complete |
+| 3.5 Repair hardening | Probe, templates, model benchmark | Real repository repair is credible | Complete |
+| 4 Alan skill | Skill, automation recipe, artifact | Runs in a real session | Next |
+| 5 Benchmark and demo | Corpus, metrics, README, video | Before and after are measurable | Planned |
+| 6 Hardening | Errors, license, release, submission | Fresh clone works | Planned |
 
-Phase 0 and Phase 1 are complete at the current checkpoint. `make check-full` passes with 68 tests and 87.93 percent coverage. The fixture grade is reproducible: 8 mutants are killed, 1 boundary mutant survives, for a score of 88.9 percent. Phase 2, the Markdown report and CI threshold gate, is next.
+Phase 0 through Phase 3.5 are complete at the current checkpoint. `make check-full` is green. The fixture grade is reproducible: 5 mutants are killed, 1 boundary mutant survives, for a score of 83.3 percent. The real repository run moved from 36.84 percent to 89.47 percent after verified repair, with 10 kept tests and no model calls.
 
 The full gate for each phase is in `docs/BUILD_PLAN.md`.
 
@@ -159,7 +191,9 @@ The full gate for each phase is in `docs/BUILD_PLAN.md`.
 - `docs/BUILD_PLAN.md` for the hour by hour plan and checkpoints.
 - `docs/CROSS_RESEARCH.md` for the evidence and the caveats.
 - `docs/EVAL.md` for the benchmark and the falsifiable claims.
+- `docs/MODEL_BENCHMARK.md` for the measured model fallback comparison.
 - `docs/WORKFLOW.md` for the Alan, CI, and local flows.
+- `docs/DEMO.md` for the recorded end to end session on the fixture.
 - `docs/INIT_PROMPT.md` for the prompt that starts the coding session.
 
 ## License

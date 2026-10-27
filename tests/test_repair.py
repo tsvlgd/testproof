@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 from testproof.model import ModelClient, ModelConfig
 from testproof.models import Mutant, MutationPoint
-from testproof.repair import RepairEngine, _extract_test
+from testproof.repair import RepairEngine, _build_prompt, _extract_test, _split_test_code
 
 
 def _make_mutant() -> Mutant:
@@ -40,9 +40,121 @@ def test_extract_test_from_markdown_block() -> None:
     assert "def test_boundary" in result
 
 
+def test_extract_test_ignores_reasoning_before_code() -> None:
+    response = (
+        "Distinguishing input: 50.\n\n"
+        "```python\nfrom shipping import shipping_fee\n\n"
+        "def test_boundary():\n    assert shipping_fee(50) == 0\n```\n"
+    )
+    result = _extract_test(response)
+    assert result is not None
+    assert result.startswith("from shipping import shipping_fee")
+    assert "def test_boundary" in result
+
+
+def test_extract_test_keeps_return_annotation() -> None:
+    response = (
+        "```python\nfrom shipping import shipping_fee\n\n"
+        "def test_boundary() -> None:\n"
+        "    assert shipping_fee(50) == 0\n```\n"
+    )
+    result = _extract_test(response)
+    assert result is not None
+    assert result.startswith("from shipping import shipping_fee")
+    assert "def test_boundary() -> None:" in result
+    assert "assert shipping_fee(50) == 0" in result
+
+
+def test_extract_test_keeps_only_one_new_test_from_an_echoed_suite() -> None:
+    response = (
+        "```python\nfrom shipping import shipping_fee\n\n"
+        "def test_existing():\n"
+        "    assert shipping_fee(100) == 0\n\n"
+        "def test_boundary():\n"
+        "    assert shipping_fee(50) == 0\n\n"
+        "def test_other():\n"
+        "    assert shipping_fee(10) == 5\n```\n"
+    )
+    existing = (
+        "from shipping import shipping_fee\n\n"
+        "def test_existing():\n"
+        "    assert shipping_fee(100) == 0\n"
+    )
+
+    result = _extract_test(response, existing)
+
+    assert result is not None
+    assert "def test_boundary" in result
+    assert "def test_existing" not in result
+    assert "def test_other" not in result
+
+
+def test_extract_test_returns_none_when_all_tests_already_exist() -> None:
+    response = (
+        "from shipping import shipping_fee\n\n"
+        "def test_existing():\n"
+        "    assert shipping_fee(100) == 0\n"
+    )
+    existing = (
+        "from shipping import shipping_fee\n\n"
+        "def test_existing():\n"
+        "    assert shipping_fee(100) == 0\n"
+    )
+
+    assert _extract_test(response, existing) is None
+
+
+def test_extract_test_handles_decorated_test() -> None:
+    response = (
+        "import pytest\n"
+        "from shipping import shipping_fee\n\n"
+        "@pytest.mark.parametrize('total', [50, 51])\n"
+        "def test_boundary(total):\n"
+        "    assert shipping_fee(total) == 0\n"
+    )
+
+    result = _extract_test(response)
+
+    assert result is not None
+    assert "@pytest.mark.parametrize" in result
+    assert "def test_boundary" in result
+
+
+def test_split_test_code_separates_imports_and_decorated_body() -> None:
+    imports, body = _split_test_code(
+        "import pytest\n"
+        "from shipping import shipping_fee\n\n"
+        "@pytest.mark.parametrize('total', [50])\n"
+        "def test_boundary(total):\n"
+        "    assert shipping_fee(total) == 0\n"
+    )
+
+    assert imports == ["import pytest", "from shipping import shipping_fee"]
+    assert body.startswith("@pytest.mark.parametrize")
+    assert "def test_boundary" in body
+
+
 def test_extract_test_returns_none_for_empty() -> None:
     assert _extract_test("") is None
     assert _extract_test("   ") is None
+
+
+def test_build_prompt_contains_reasoning_and_hint() -> None:
+    prompt = _build_prompt(
+        file_path="shipping.py",
+        function_source="def shipping_fee(total: int) -> int:\n    return 0\n",
+        mutated_line="    if total >= 50:",
+        existing_tests="def test_free():\n    assert shipping_fee(100) == 0\n",
+        mutant=_make_mutant(),
+        feedback="no distinguishing input found",
+    )
+
+    assert "Worked example" in prompt
+    assert "Step 1" in prompt
+    assert "Step 2" in prompt
+    assert "boundary" in prompt
+    assert "no distinguishing input found" in prompt
+    assert "fenced Python code block" in prompt
 
 
 def test_repair_rejects_invalid_model_response(tmp_path: Path) -> None:
@@ -92,12 +204,12 @@ def test_repair_rejects_invalid_model_response(tmp_path: Path) -> None:
     result = engine.repair(report, dry_run=True)
     assert len(result.kept) == 0
     assert len(result.rejected) == 1
-    assert result.rejected[0].reason == "model returned no valid test"
+    assert result.rejected[0].reason.startswith("model returned no valid test")
 
 
 def test_model_config_defaults() -> None:
     config = ModelConfig(api_key="test-key")
     assert config.base_url == "https://openrouter.ai/api/v1"
-    assert config.model == "qwen/qwen-2.5-coder-32b-instruct"
-    assert config.max_tokens == 500
+    assert config.model == "qwen/qwen3-235b-a22b-2507"
+    assert config.max_tokens == 1200
     assert config.temperature == 0.0

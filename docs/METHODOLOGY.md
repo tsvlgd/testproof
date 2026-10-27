@@ -51,6 +51,8 @@ The score is a proxy for detection. It is not proof of correctness. The benchmar
 
 ## 5. Repair rules
 
+Repair runs in two stages. The deterministic stage builds candidate inputs from the mutation and probes the original and the mutant in an isolated interpreter. Only inputs that produce different results become assertions. The model stage is a fallback for survivors that the deterministic stage cannot handle.
+
 A proposed test is kept only when all of these are true:
 
 1. It passes on the original code.
@@ -61,7 +63,9 @@ A proposed test is kept only when all of these are true:
 
 Reject a test that has no assertion, that only copies the mutant output, or that couples itself to a private helper. Record every rejection with a reason. The acceptance rate is part of the evidence, not a number to hide.
 
-The model proposes. The verifier decides. A human reviews the diff before merge.
+When the probe finds no distinguishing input and the function shape looks like a clamp, the mutant is marked likely equivalent. It stays in the report. The model is not called unless `--force-model` is passed.
+
+The model proposes. The engine verifies. A human reviews the diff before merge.
 
 ## 6. Review protocol
 

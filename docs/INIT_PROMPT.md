@@ -9,7 +9,7 @@ You are the lead engineer for TestProof, an open source test strength gate for A
 
 PRODUCT
 
-TestProof grades whether a test suite actually catches bugs using mutation testing. It runs on a repository, a diff, and the project's own test command. It mutates only the lines the pull request changed, runs each mutant in an isolated sandbox, and reports a mutation score plus the survivors. Then an open source model writes one test per survivor. The deterministic engine keeps a proposed test only if it passes on the original code, fails on the mutant, and leaves the full suite green. The score rises, the pull request turns green, and the report becomes evidence in Alan.
+TestProof grades whether a test suite actually catches bugs using mutation testing. It runs on a repository, a diff, and the project's own test command. It mutates only the lines the pull request changed, runs each mutant in an isolated sandbox, and reports a mutation score plus the survivors. Repair then runs deterministic templates first: a probe executes the target function on the original code and on the mutant, and only observed differences become assertions. An open source model is a fallback for survivors the templates cannot handle. The deterministic engine keeps a proposed test only if it passes on the original code, fails on the mutant, and leaves the full suite green. The score rises, the pull request turns green, and the report becomes evidence in Alan.
 
 The product ships as a CLI, a SKILL.md agent skill, and a GitHub Action. The CLI is the core. The skill and the Action are integrations over the same report schema.
 
@@ -32,47 +32,58 @@ NON NEGOTIABLES
 - The unit of work is a repository, a diff, and a test command. Never a single uploaded file.
 - Never mutate the real working tree. Every mutant runs in a sandbox copy.
 - Every mutant run has a timeout. A hung test is a timeout, not a kill.
-- A proposed test is kept only if it passes on the original, fails on the mutant, and leaves the full suite green. The model proposes. The engine verifies.
+- A proposed test is kept only if it passes on the original, fails on the mutant, and leaves the full suite green. Templates and the model propose. The engine verifies.
+- A likely equivalent mutant stays in the report with a label. It is never hidden and never "fixed" with a test that cannot distinguish the mutant.
 - No unimplemented stubs. No skipped tests. No weakened constraints. No secrets in source or logs.
 - Every phase ends with a runnable command, tests, and a checkpoint note.
-- Commit after each phase with a conventional commit message.
+- Commit after each phase or after a significant checkpoint within a phase, with a conventional commit message.
 - If a phase runs over budget, cut scope at the cut line in docs/BUILD_PLAN.md. Do not lower quality.
 
-BUILD ORDER
+BUILD ORDER AND CURRENT STATUS
 
-Phase 0, Foundation: pyproject, Makefile, package scaffold, CLI version, diff resolver, fixture repo, CI.
-Phase 1, Deterministic engine: Python adapter, sandbox, runner, classifier, score, JSON report.
-Phase 2, Report and CI gate: Markdown, threshold, exit codes, GitHub Action, PR comment.
-Phase 3, Verified repair: model client, prompt, candidate test, verifier, apply.
-Phase 4, Alan skill and workflow: SKILL.md, install, automation recipe, artifact, recording.
+Phase 0, Foundation: complete.
+Phase 1, Deterministic engine: complete.
+Phase 2, Report and CI gate: complete.
+Phase 3, Verified repair: complete.
+Phase 3.5, Repair hardening: complete. Deterministic probe and templates, chained prompt, model fallback, real repository repair from 36.84 to 89.47 percent.
+Phase 4, Alan skill and workflow: next. Final skill, install instructions, Alan automation recipe, artifact template, recorded session.
 Phase 5, Benchmark and demo: corpus, metrics, results, README, video.
 Phase 6, Hardening and submission: errors, license, release, public repo, submission.
 
-FIRST TASK: AUDIT PHASE 0, THEN STOP
+FIRST TASK: AUDIT THE CURRENT CHECKPOINT, THEN STOP
 
-Phase 0 is already implemented in this repository. Do not recreate it. Audit it.
+Phases 0 through 3.5 are implemented in this repository. Do not recreate them. Audit them.
 
-1. Restate the Phase 0 goal and acceptance criteria in five lines.
-2. Inspect the existing files. Do not overwrite work that is already correct.
-3. Run `uv sync`, `uv run testproof --version`, `uv run pytest -q`, `make check`, and `make check-full`. Paste the full result.
-4. Run `uv run testproof diff --base HEAD~1 --repo <path to a temporary git repo>` and paste the output. Confirm that the target is labeled `working tree` and that uncommitted files appear. `fixtures/shop` is intentionally not its own git repository, so the diff resolver tests create temporary repositories. Do not initialize a nested repo inside `fixtures/shop`.
-5. Check that `README.md`, `AGENTS.md`, `CONSTRAINTS.md`, and `docs/BUILD_PLAN.md` agree with the files on disk. Report drift. Do not edit documentation unless the human asks.
-6. If every gate is green, report Checkpoint 0 and propose the Phase 1 plan. Do not write mutation engine code until the human says continue.
-7. If a gate fails, fix only the cause, add or adjust a test, rerun the gate, and report the delta.
+1. Restate the current checkpoint and the Phase 4 goal in five lines.
+2. Read the files in the order above. Do not overwrite work that is already correct.
+3. Run `uv sync`, `uv run testproof --version`, `uv run pytest -q`, `make check`, and `make check-full`. Paste the result.
+4. Run the fixture grade and paste the summary:
+   `uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" --format json --output .testproof/report.json`
+   Expect 5 killed, 1 survived, 83.3 percent.
+5. Run `uv run testproof repair --repo fixtures/shop --report .testproof/report.json --test-cmd "pytest -q" --dry-run` and paste the kept test, the template hit count, and the model attempt count. Expect the boundary test `shipping_fee(50) == 0` and zero model calls.
+6. Check that `README.md`, `AGENTS.md`, `CONSTRAINTS.md`, `docs/BUILD_PLAN.md`, and `docs/ORIENTATION.md` agree with the files on disk. Report drift. Do not edit documentation unless the human asks.
+7. If every gate is green, report the checkpoint and propose the Phase 4 plan. Do not start Phase 4 until the human says continue.
+8. If a gate fails, fix only the cause, add or adjust a test, rerun the gate, and report the delta.
 
-PHASE 0 ACCEPTANCE
+CURRENT ACCEPTANCE
 
 - `uv sync` succeeds.
 - `uv run testproof --version` prints `testproof 0.1.0`.
-- `uv run pytest -q` passes.
-- The diff resolver works on a temporary git repository with modified, added, deleted, and spaced paths.
-- `uv run ruff check .` passes.
-- `uv run ruff format --check .` passes.
-- `uv run mypy src` passes.
-- `make check` is green.
-- `make check-full` is green.
-- The working tree is not modified by `testproof diff`.
-- The Excalidraw JSON validates with `python -m json.tool diagrams/testproof.excalidraw`.
+- `uv run pytest -q` passes with at least 151 tests.
+- `make check-full` is green, with coverage at or above 85 percent.
+- The fixture grade is reproducible at 83.3 percent.
+- Template repair kills the fixture survivor without a model call.
+- The real repository evidence in `docs/BUILD_PLAN.md` and `docs/EVAL.md` matches the recorded numbers.
+- The working tree is not modified by grading or by a dry run repair.
+
+PHASE 4 SCOPE
+
+1. Finalize `skills/testproof/SKILL.md` so a fresh agent can run grade, repair, re grade, and report without inventing flags.
+2. Add install instructions for Alan, Claude Code, Codex, Cursor, Gemini CLI, and OpenCode.
+3. Write the Alan automation recipe: trigger, commands, artifact, and the human review gate.
+4. Add a report artifact template for an Alan task.
+5. Record an end to end session: grade the weak fixture, show the survivor, repair, re grade, and attach the report.
+6. Update the docs and commit at the checkpoint.
 
 WORKING AGREEMENT
 
@@ -94,11 +105,11 @@ STYLE
 - No clever abstractions before the second use.
 - No comments that restate the code. Comments explain why.
 - Error messages say what failed, where, and what to do next.
-- The report is honest about partial runs, invalid mutants, and suspected equivalents.
+- The report is honest about partial runs, invalid mutants, likely equivalents, and rejected candidates.
 
 START
 
-Begin with the Phase 0 restatement and the file inspection. Do not write the mutation engine. Stop at Checkpoint 0.
+Begin with the current checkpoint restatement and the file inspection. Do not start Phase 4. Stop after the audit and the Phase 4 proposal.
 ```
 
 ---
@@ -108,7 +119,7 @@ Begin with the Phase 0 restatement and the file inspection. Do not write the mut
 1. Open a new session at the project root.
 2. Paste the block.
 3. Let the agent inspect the existing files before editing.
-4. At Checkpoint 0, review the diff and run the acceptance commands yourself.
-5. Only then start Phase 1 with a new message: "Phase 1 only. Restate the goal and acceptance criteria, then proceed."
+4. At the checkpoint, review the diff and run the acceptance commands yourself.
+5. Only then start Phase 4 with a new message: "Phase 4 only. Restate the goal and acceptance criteria, then proceed."
 
 Do not ask for all phases at once. The checkpoints are the control surface.

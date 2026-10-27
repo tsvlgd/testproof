@@ -362,8 +362,26 @@ def repair_command(
         bool,
         typer.Option("--apply", help="Write verified tests to the test file."),
     ] = False,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="Override the configured model identifier."),
+    ] = None,
+    force_model: Annotated[
+        bool,
+        typer.Option(
+            "--force-model",
+            help="Call the model even when the deterministic probe finds no killing input.",
+        ),
+    ] = False,
+    no_templates: Annotated[
+        bool,
+        typer.Option(
+            "--no-templates",
+            help="Skip deterministic templates and ask the model for every survivor.",
+        ),
+    ] = False,
 ) -> None:
-    """Repair survivors with an open source model."""
+    """Repair survivors with deterministic templates and a model fallback."""
     import json as _json
 
     from testproof.models import Report
@@ -404,20 +422,41 @@ def repair_command(
         errors=tuple(report_data.get("errors", [])),
     )
 
-    model = ModelClient.from_env()
-    repair_engine = RepairEngine(repo=repo, test_command=test_cmd, model_client=model)
+    model_client: ModelClient | None
+    try:
+        model_client = ModelClient.from_env(model_override=model)
+        model_name = model_client.model_name
+    except (OSError, RuntimeError, ValueError) as exc:
+        model_client = None
+        model_name = "unavailable"
+        typer.secho(f"Model unavailable: {exc}", err=True)
 
-    result = repair_engine.repair(rep, dry_run=dry_run, apply=apply)
+    repair_engine = RepairEngine(repo=repo, test_command=test_cmd, model_client=model_client)
 
+    result = repair_engine.repair(
+        rep,
+        dry_run=dry_run,
+        apply=apply,
+        force_model=force_model,
+        use_templates=not no_templates,
+    )
+
+    typer.echo(f"Model: {model_name}")
     typer.echo(f"Kept: {len(result.kept)}")
+    typer.echo(f"Likely equivalent: {len(result.equivalent)}")
     typer.echo(f"Rejected: {len(result.rejected)}")
+    typer.echo(f"Deterministic template hits: {result.template_hits}")
+    typer.echo(f"Model attempts: {result.model_attempts}")
+    for mutant_id in result.equivalent:
+        typer.echo(f"  Likely equivalent {mutant_id}")
     for record in result.rejected:
         typer.echo(f"  Rejected {record.test_id}: {record.reason}")
     for mutant_id, test_code in result.kept:
         typer.echo(f"  Kept test for {mutant_id}:")
         typer.echo(test_code)
 
-    model.close()
+    if model_client is not None:
+        model_client.close()
 
 
 if __name__ == "__main__":

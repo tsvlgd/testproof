@@ -112,15 +112,36 @@ A high score does not prove correctness. It means the tests catch the planted bu
 skills/testproof/SKILL.md
 ```
 
+The skill follows the Agent Skills specification. The `name` matches the directory and the description says when to use it. The only required file is `SKILL.md`. Keep the folder intact if a future version adds scripts or references.
+
 Install it in one of these ways:
 
-- Alan: use the skill install flow for your workspace, or copy the folder into the skills directory the Alan desktop app reads.
-- Claude Code: `~/.claude/skills/testproof/`
-- Codex CLI: `~/.codex/skills/testproof/`
-- OpenCode: `~/.config/opencode/skills/testproof/`
-- Cross agent: `~/.agents/skills/testproof/`
+| Agent | User scope | Project scope |
+| --- | --- | --- |
+| Alan | Alan skill install flow, or the workspace `skills/` folder | `skills/testproof/` |
+| Claude Code | `~/.claude/skills/testproof/` | `.claude/skills/testproof/` |
+| Codex CLI | `~/.codex/skills/testproof/` | `.codex/skills/testproof/` |
+| Cursor | `~/.cursor/skills/testproof/` | `.cursor/skills/testproof/` |
+| Gemini CLI | `~/.gemini/skills/testproof/` or `~/.agents/skills/testproof/` | `.gemini/skills/testproof/` or `.agents/skills/testproof/` |
+| OpenCode | `~/.config/opencode/skills/testproof/` | `.opencode/skills/testproof/` |
+| Cross agent | `~/.agents/skills/testproof/` | `.agents/skills/testproof/` |
 
-The skill follows the Agent Skills specification. The `name` matches the directory and the description says when to use it.
+One command for any compatible agent, when the repository is public:
+
+```bash
+npx skills add <owner>/testproof --skill testproof
+```
+
+Manual install from this repository:
+
+```bash
+mkdir -p ~/.claude/skills
+cp -R skills/testproof ~/.claude/skills/testproof
+```
+
+Replace `~/.claude/skills` with the path for the agent you use. For Alan, open this repository as the workspace so the skill is already at `skills/testproof/`, or point the Alan skill install flow at that folder.
+
+Verify that the agent lists the skill by name before you rely on it. If the agent shows the skill but does not load it, check that the folder name matches the `name` field and that `SKILL.md` is at the root of the folder.
 
 ### 3.2 Skill behavior
 
@@ -154,6 +175,21 @@ When a pull request is opened or review is requested, run the testproof skill.
 5. Do not approve or merge. Leave the decision to a human.
 ```
 
+The command the automation should run, with the repository values substituted:
+
+```bash
+uvx testproof grade \
+  --repo . \
+  --base "origin/$BASE_REF" \
+  --head HEAD \
+  --test-cmd "pytest -q" \
+  --threshold 80 \
+  --format json \
+  --output .testproof/report.json
+```
+
+If the score is below the threshold, run `uvx testproof repair` with the same report and test command, then re grade. Keep the model key in the Alan environment secret store. Template repair still runs when the key is absent.
+
 5. Select the repository and the environment.
 6. Save and run once manually to verify.
 7. Turn it on for pull request events.
@@ -177,12 +213,20 @@ Test command: <command>
 - Status: pass or fail
 - Partial: yes or no
 - Confidence: high, medium, or low
+- Likely equivalent: <n>
+- Model calls: <n>
 
 ## Survivors fixed
 
 | File | Line | Original | Replacement | Test added | Verified |
 | --- | --- | --- | --- | --- | --- |
 | ... | ... | ... | ... | ... | yes |
+
+## Rejected candidates
+
+| Mutant | Reason | Model called |
+| --- | --- | --- |
+| ... | ... | yes or no |
 
 ## Survivors remaining
 
@@ -198,6 +242,8 @@ Test command: <command>
 
 A high mutation score does not prove correctness. It means the tests catch the planted bugs in the changed lines.
 ```
+
+Attach the JSON report and this Markdown artifact to the Alan task with the Alan test report tool. If the Alan MCP server is not available, keep the JSON in `.testproof/` and attach the Markdown summary. The artifact is evidence for a reviewer. It is not an approval. A human reads the kept tests and decides whether to merge.
 
 ## 4. Local flow
 
@@ -237,10 +283,24 @@ uvx testproof repair \
   --repo . \
   --report .testproof/report.json \
   --test-cmd "pytest -q" \
+  --dry-run
+```
+
+Repair runs deterministic templates first. It prints the kept tests, the rejected candidates with reasons, the likely equivalent mutants, and the number of model calls. A model key is optional for template only repair.
+
+To apply the verified tests:
+
+```bash
+uvx testproof repair \
+  --repo . \
+  --report .testproof/report.json \
+  --test-cmd "pytest -q" \
   --apply
 ```
 
-The tool prints a diff of the tests it added and a verification record for each one.
+Use `--model` to override the configured model for one run, `--force-model` to ask the model even when the probe suggests a mutant is equivalent, and `--no-templates` to benchmark the model without the deterministic stage. The verifier still decides what is kept.
+
+The tool prints the tests it kept and a verification record for each one. It does not silently discard a rejection.
 
 ### 4.4 Re grade
 
@@ -261,7 +321,8 @@ uvx testproof grade \
 | Baseline test failure | "The test command fails on the unmodified code" | Fix the suite before grading |
 | No mutants discovered | "No mutation points found on the changed lines" | Check the adapter and the diff scope |
 | Time budget reached | "Partial score: 34 of 50 mutants run" | Increase the budget or reduce the cap |
-| Missing model key | "Set MODEL_API_KEY to use repair" | Export the key or use `--dry-run` |
+| Missing model key | "Model unavailable: MODEL_API_KEY is required" | Template repair still runs. Export the key for the model fallback, or use `--dry-run` |
+| Model returns empty content | "the model returned empty content" | Raise the token limit, choose a non reasoning model, or keep templates only |
 | Model returns invalid test | "Candidate rejected: does not parse" | Record the rejection and continue |
 | Candidate passes on mutant | "Candidate rejected: does not kill the mutant" | Try the next survivor |
 | Candidate fails on original | "Candidate rejected: fails on the original code" | Try the next survivor |
@@ -289,5 +350,7 @@ The skill plus the GitHub Action gives the same user outcome without the hosting
 6. Open the pull request. Show the check turn green.
 7. Open the Alan session. Show the report artifact.
 8. Show the benchmark table with the before and after.
+
+The full transcript with commands, outputs, and the attached artifact is in `docs/DEMO.md`.
 
 This sequence tells the whole story in under 3 minutes.

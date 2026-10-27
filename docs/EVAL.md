@@ -62,6 +62,46 @@ Options, in order of preference:
 
 Do not copy code with an unclear license. Record the source and the license for every module in `benchmark/corpus/SOURCES.md`.
 
+### 3.4 Preliminary real repository evidence
+
+Before the full corpus exists, Phase 3.5 ran one real repository end to end to test whether the repair loop is credible outside the fixture. This is preliminary evidence, not a substitute for the eval.
+
+| Item | Value |
+| --- | --- |
+| Repository | Three Python modules: calculator, validator, formatter |
+| Mutants | 19 |
+| Baseline | 7 killed, 12 survived, 36.84 percent |
+| After verified repair | 17 killed, 2 survived, 89.47 percent |
+| Kept tests | 10 |
+| Rejected tests | 0 |
+| Likely equivalent | 2 clamp comparisons |
+| Model calls | 0 |
+| Runtime | About 13 seconds |
+
+Method: `testproof grade` on the full repository, then `testproof repair --apply` with the deterministic templates enabled, then `testproof grade` again with the same test command.
+
+What this shows: the repair loop can raise a real suite by more than 50 points with tests that pass on the original code and fail on the mutant. It also shows that a template first engine can avoid model calls entirely on common operator shapes.
+
+What this does not show: one repository is not a corpus. It does not measure real bug detection, false kills, partial rates, or flake rates. It does not prove that the model fallback is reliable. Phase 5 must repeat the measurement on at least ten modules and include known bugs.
+
+The two remaining survivors are `>=` to `>` and `<=` to `<` inside a clamp function. No valid range distinguishes the original from the mutant, so both are reported as likely equivalent and left in the report rather than hidden.
+
+### 3.5 Model fallback measurement
+
+The template path covers common shapes, so the model fallback needs its own evidence. Seven OpenRouter models ran on the same 12 survivors with `--no-templates`, one attempt per survivor, verifier deciding every keep.
+
+| Model | Kept of 10 killable | Main failure mode |
+| --- | --- | --- |
+| `qwen/qwen3-235b-a22b-2507` | 9 | none systematic |
+| `deepseek/deepseek-v4-flash` | 6 | empty content from reasoning |
+| `google/gemini-2.5-flash` | 6 | read timeouts under load |
+| `qwen/qwen-2.5-coder-32b-instruct` | 5 | outputs that do not kill |
+| `qwen/qwen3-coder-30b-a3b-instruct` | 4 | candidates that fail the original suite |
+| `cohere/north-mini-code:free` | 0 | empty content |
+| `google/gemma-4-31b-it:free` | 0 | rate limits |
+
+Method, costs, and caveats are in `docs/MODEL_BENCHMARK.md`. The caveat that matters for evaluation: one repository, one run per model. Phase 5 owns the repeated measurement across the corpus.
+
 ## 4. Conditions
 
 Run each module under these conditions:

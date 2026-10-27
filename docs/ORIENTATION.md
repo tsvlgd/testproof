@@ -63,7 +63,7 @@ If a rule is unclear, ask in the OpenFire Discord before spending build time. Th
 
 ## What exists today
 
-Phase 0 is complete. The Phase 1 deterministic engine and its acceptance gates are complete at pushed commit `5ccc6ef`. Phase 2 reporting and CI gating, Phase 3 verified repair, and the Alan workflow remain planned.
+Phase 0, Phase 1, Phase 2, and Phase 3 are complete and pushed. Phase 3.5 hardened repair with deterministic templates and a real repository run. Phase 4, the Alan skill and workflow, is next.
 
 | Area | Status | Where |
 | --- | --- | --- |
@@ -73,18 +73,20 @@ Phase 0 is complete. The Phase 1 deterministic engine and its acceptance gates a
 | Evaluation design | Complete | `docs/EVAL.md` |
 | Build and evidence method | Complete | `docs/METHODOLOGY.md` |
 | Alan, CI, and local flows | Complete draft | `docs/WORKFLOW.md` |
-| Agent skill | Drafted | `skills/testproof/SKILL.md` |
+| Agent skill | Drafted, Phase 4 final pass pending | `skills/testproof/SKILL.md` |
 | Weak demonstration fixture | Working | `fixtures/shop/` |
 | CLI version, diff, and grade commands | Working | `src/testproof/cli.py` |
 | Diff resolver | Working, worktree and commit modes | `src/testproof/diff.py` |
-| Unit tests | 68 passing at Phase 1 checkpoint | `tests/` |
+| Unit tests | 151 passing at Phase 3.5 checkpoint | `tests/` |
 | CI | Lint, types, tests, coverage, security, build | `.github/workflows/ci.yml` |
 | Mutation engine | Implemented and fixture verified | `src/testproof/engine.py` |
 | Sandbox and test runner | Implemented and tested | `src/testproof/sandbox.py`, `src/testproof/runner.py` |
 | Score and JSON report | Implemented | `src/testproof/models.py`, `src/testproof/report.py` |
-| Markdown report and threshold | Not built | Phase 2 |
-| GitHub Action | Not built | Phase 2 |
-| Model client and verifier | Not built | Phase 3 |
+| Markdown report and threshold | Implemented | `src/testproof/report.py`, `src/testproof/cli.py` |
+| GitHub Action | Implemented | `action.yml`, `.github/workflows/testproof.yml` |
+| Model client and repair engine | Implemented | `src/testproof/model.py`, `src/testproof/repair.py` |
+| Deterministic repair templates | Implemented | `src/testproof/templates.py`, `src/testproof/probe.py` |
+| Model benchmark | Complete | `docs/MODEL_BENCHMARK.md` |
 | Benchmark and demo video | Not built | Phase 5 |
 | Static report viewer | Not built | Phase 5, optional |
 | Remote MCP server and marketplace plugin | Roadmap | After the hackathon |
@@ -97,9 +99,10 @@ The project has a local commit history and a private GitHub repository at `https
 | --- | --- | --- | --- | --- |
 | 0 Foundation | A repo that runs, a weak fixture, and a diff resolver | CLI, diff resolver, tests, fixture, CI | `make check` green | Complete after the diff fix |
 | 1 Deterministic engine | Grade Python changes and produce a reproducible score | Adapter, sandbox, runner, engine, score, JSON | Same input, same score | Complete and pushed at `5ccc6ef` |
-| 2 Report and CI gate | Turn the score into a pull request gate | Markdown, threshold, exit codes, GitHub Action | Pull request fails below threshold | Planned |
-| 3 Verified repair | Let an open model write missing tests and prove each kill | Model client, prompt, verifier, apply | Score rises with verified tests | Planned |
-| 4 Alan skill and workflow | Make the tool usable in a real Alan session | Skill, automation recipe, artifact, recording | Skill runs end to end | Planned |
+| 2 Report and CI gate | Turn the score into a pull request gate | Markdown, threshold, exit codes, GitHub Action | Pull request fails below threshold | Complete |
+| 3 Verified repair | Let an open model write missing tests and prove each kill | Model client, prompt, verifier, apply | Score rises with verified tests | Complete |
+| 3.5 Repair hardening | Make repair credible on a real repository | Deterministic probe and templates, model fallback, benchmark | Real repo score rises with verified tests | Complete |
+| 4 Alan skill and workflow | Make the tool usable in a real Alan session | Skill, automation recipe, artifact, recording | Skill runs end to end | Next |
 | 5 Benchmark and demo | Prove the tool works beyond the fixture | Corpus, metrics, results, video | Before and after are measurable | Planned |
 | 6 Hardening and submission | A fresh clone works and the submission is complete | Errors, release, public repo, X post | Fresh clone works | Planned |
 
@@ -161,14 +164,17 @@ The resolver also includes untracked text files, respects `.gitignore`, skips bi
 
 ## Current state and next step
 
-Phase 0 is complete. Phase 1's local acceptance gates now pass:
+Phase 0 through Phase 3.5 are complete. The latest local acceptance gates pass:
 
 ```text
-68 tests passing
-87.93 percent coverage
+151 tests passing
+90.16 percent coverage
 make check-full green
-fixture grade: 8 killed, 1 survived, 88.9 percent
+fixture grade: 5 killed, 1 survived, 83.3 percent
 repeated fixture runs: same score and mutant IDs
+real repo baseline: 36.84 percent (7 killed, 12 survived)
+real repo after repair: 89.47 percent (17 killed, 2 survived)
+real repo repair: 10 template hits, 0 model calls, about 13 seconds
 ```
 
 The fixture acceptance command is:
@@ -179,9 +185,13 @@ uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" 
 
 `fixtures/shop` is a tiny example repository containing shipping code and deliberately weak tests. It has no Git history of its own, so `--all` asks the engine to grade every supported Python file there instead of asking Git for changed lines. For a normal Git repository, omit `--all`: TestProof resolves the Git diff and grades only changed Python lines by default. `--all` can also be used explicitly for a full repository audit, but that can be slow and is never the default.
 
-The known survivor is the boundary mutation `>=` to `>` on `shipping.py:6`. That means the existing tests miss the exact free shipping threshold. It is useful fixture evidence, not proof that TestProof catches every real bug.
+The known fixture survivor is the boundary mutation `>=` to `>` on `shipping.py:6`. That means the existing tests miss the exact free shipping threshold. It is useful fixture evidence, not proof that TestProof catches every real bug.
 
-Next is Phase 2: Markdown reporting, threshold handling and exit codes, and the GitHub Actions pull request gate. Then Phase 3 builds verified repair with an open model, followed by completing the agent workflow, benchmark, and release work. See `docs/BUILD_PLAN.md` for the gates and checkpoints.
+The real repository result is the stronger signal. A three module repository with 19 mutants and 12 survivors moved from 36.84 percent to 89.47 percent after `testproof repair --apply`. The engine kept 10 tests. Both remaining survivors are clamp comparisons that no valid input can distinguish, so the report marks them likely equivalent instead of keeping a fake test.
+
+Repair runs deterministic templates first. A probe executes the target function on the original and the mutant, and only observed differences become assertions. The model is a fallback for survivors the templates cannot handle. The verifier still decides what is kept. The fallback default `qwen/qwen3-235b-a22b-2507` is measured in `docs/MODEL_BENCHMARK.md`.
+
+Next is Phase 4: finalize the portable skill, write the install and Alan automation instructions, record a real session, and attach a report artifact. Then Phase 5 builds the benchmark corpus and the demo. See `docs/BUILD_PLAN.md` for the gates and checkpoints.
 
 ## Reading order
 

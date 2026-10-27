@@ -1,16 +1,30 @@
 ---
 name: testproof
-description: Grade whether a test suite catches bugs with diff scoped mutation testing, then use an open source model to write missing tests and verify each kill. Use when tests pass but test strength is unknown, when reviewing AI written code, or before claiming a task is done.
+description: Grade whether a test suite catches bugs with diff scoped mutation testing, then write missing tests with deterministic templates and an open source model fallback, verifying each kill. Use when tests pass but test strength is unknown, when reviewing AI written code, or before claiming a task is done.
 license: MIT
 compatibility: Requires git, Python 3.11 or newer, uv, and a project test command.
 metadata:
- version: "0.1.0"
+ version: "0.2.0"
  author: TestProof contributors
 ---
 
 # TestProof
 
-Use this skill when a test suite is green and the question is whether it would catch a real bug. TestProof mutates only the lines a change touched, runs the project's own test command, and reports the mutants that survived. Then it asks an open source model for the missing tests and keeps only the tests that the engine proves will kill a mutant.
+Use this skill when a test suite is green and the question is whether it would catch a real bug. TestProof mutates only the lines a change touched, runs the project's own test command, and reports the mutants that survived. Repair runs deterministic templates first: a probe executes the target function on the original and the mutant, and only observed differences become assertions. An open source model is a fallback for survivors the templates cannot handle. A deterministic verifier keeps a test only when it passes on the original code, fails on the mutant, and leaves the full suite green.
+
+## Install
+
+Copy the `testproof` folder into the skills directory for your agent. The common paths are:
+
+- Alan: open the repository as the workspace, or use the Alan skill install flow on `skills/testproof/`
+- Claude Code: `~/.claude/skills/testproof/`
+- Codex CLI: `~/.codex/skills/testproof/`
+- Cursor: `~/.cursor/skills/testproof/`
+- Gemini CLI: `~/.gemini/skills/testproof/`
+- OpenCode: `~/.config/opencode/skills/testproof/`
+- Cross agent: `~/.agents/skills/testproof/`
+
+The folder name must match the `name` field. Restart the agent if it does not list the skill.
 
 ## When to use
 
@@ -58,6 +72,8 @@ testproof repair \
   --dry-run
 ```
 
+Repair runs deterministic templates first and does not need a model key. It reports kept tests, rejected candidates with reasons, likely equivalent mutants, and the number of model calls. The model is a fallback for survivors that templates cannot handle.
+
 7. Inspect every proposed test. Reject a test that changes production code, has no assertion, or only asserts a value copied from the mutant.
 8. Apply the verified tests:
 
@@ -70,7 +86,7 @@ testproof repair \
 ```
 
 9. Re grade with the same base, test command, threshold, and mutant cap.
-10. Report the before score, the after score, the tests kept, the tests rejected with reasons, and the survivors that remain. Attach the final report to the task.
+10. Report the before score, the after score, the tests kept, the tests rejected with reasons, the likely equivalent mutants, and the survivors that remain. Attach the final report to the task.
 
 ## Evidence contract
 
@@ -107,7 +123,8 @@ A test counts as kept only when the report contains evidence that it passes on t
 | Baseline test failure | Stop. Fix the suite before grading |
 | No mutation points | Report that the changed lines had no supported operators |
 | Partial score | Report the sample size and the reason. Do not present it as a complete score |
-| Model key missing | Report that repair is unavailable. Do not fake a test |
+| Model key missing | Template repair still runs. Report that the model fallback is unavailable. Do not fake a test |
+| Likely equivalent | Keep the survivor in the report and label it. Do not invent a test that cannot distinguish the mutant |
 | Model output invalid | Record the rejection reason and continue |
 | Candidate fails on the original | Reject it and record the reason |
 | Candidate passes on the mutant | Reject it and record the reason |
@@ -127,6 +144,8 @@ A test counts as kept only when the report contains evidence that it passes on t
 - Status: pass or fail
 - Partial: yes or no
 - Confidence: high, medium, or low
+- Likely equivalent: <n>
+- Model calls: <n>
 
 ### Verified tests kept
 

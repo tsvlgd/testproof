@@ -11,7 +11,8 @@ This is the phase by phase plan for the OpenFire hackathon. It assumes a solo bu
 | Phase 2: Report and CI gate | Mon 19:30 to 22:30 | 3 hours | Markdown, threshold, GitHub Action |
 | Checkpoint 2 and sleep | Mon 22:30 to Tue 06:00 | 7.5 hours | Review, rest |
 | Phase 3: Verified repair | Tue 06:00 to 11:00 | 5 hours | Model client, prompt, verifier, apply |
-| Phase 4: Alan skill and workflow | Tue 11:00 to 13:00 | 2 hours | SKILL.md, session recording, artifact |
+| Phase 3.5: Repair hardening | Tue 11:00 to 12:00 | 1 hour | Deterministic templates, probe, chained prompt, model benchmark |
+| Phase 4: Alan skill and workflow | Tue 12:00 to 13:30 | 1.5 hours | SKILL.md, session recording, artifact |
 | Phase 5: Benchmark and demo | Tue 13:00 to 17:00 | 4 hours | Corpus, metrics, README, video |
 | Phase 6: Hardening and submission | Tue 17:00 to 19:00 | 2 hours | Fresh clone, release, submission |
 | Submission buffer | Tue 19:00 to 20:00 | 1 hour | Final checks |
@@ -28,7 +29,8 @@ gantt
     Checkpoint 2 and sleep       :crit, 22:30, 7h30m
     section Tuesday
     Phase 3 Verified repair      :p3, 06:00, 5h
-    Phase 4 Alan skill           :p4, 11:00, 2h
+    Phase 3.5 Repair hardening   :p35, 11:00, 1h
+    Phase 4 Alan skill           :p4, 12:00, 1h30m
     Phase 5 Benchmark and demo   :p5, 13:00, 4h
     Phase 6 Hardening            :p6, 17:00, 2h
     Submission buffer            :crit, 19:00, 1h
@@ -36,7 +38,25 @@ gantt
 
 ## Current build status
 
-Phase 0 is complete and pushed to the private GitHub repository. Phase 1 implementation and acceptance tests now pass locally. This checkpoint records the evidence and is ready to commit and push as the Phase 1 milestone.
+Phases 0, 1, 2, and 3 are complete and pushed. Phase 3.5 is complete and recorded below. Phase 4 is next.
+
+Latest pushed checkpoint: `c8edde9` (`feat: add config file support for model client`).
+
+Checkpoint 3.5 note, 2026-10-27:
+
+- The repair loop now runs deterministic templates before any model call. A probe executes the target function against the original and the mutant in an isolated interpreter and turns only observed differences into assertion values.
+- A real repository with three modules, 19 mutants, and 12 survivors was repaired end to end. The baseline score was 36.84 percent (7 killed, 12 survived). After apply, the score was 89.47 percent (17 killed, 2 survived). The two remaining survivors are clamp comparisons with no distinguishing input and are marked likely equivalent.
+- The real repository run kept 10 tests with templates, made 0 model calls, and rejected 0 candidates. Wall time was about 13 seconds.
+- The fixture survivor at `shipping.py:6` is still the boundary `>=` to `>` mutation. The fixture score is 83.3 percent (5 killed, 1 survived, 6 total).
+- The model prompt now uses a worked example, a four step reasoning structure, a mutation specific hint, and deterministic probe feedback when templates fail.
+- The model client reads a model override, honors a configured token limit, and reports empty content as an error instead of silently returning an empty test.
+- `testproof repair` supports `--model`, `--force-model`, and `--no-templates`. Template only repair still works when no model key is configured.
+
+Checkpoint 2 note, 2026-10-27:
+
+- Markdown reporting, threshold exit codes, JSON output, and the pull request workflow are implemented and tested.
+- `uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" --threshold 90` exits 1.
+- The same command with `--threshold 80` exits 0. The fixture score is 83.3 percent (5 killed, 1 survived, 6 total).
 
 Checkpoint 0 note:
 
@@ -54,7 +74,7 @@ Checkpoint 1 progress note, 2026-10-27:
 - Added tests for sandbox isolation, runner outcome and timeout handling, engine scoring and error paths, CLI all files and diff scoped modes, and repeated run determinism.
 - `make check-full` passes locally: 68 tests, 87.93 percent coverage, Bandit clean, fixture tests pass.
 - Fixture command: `uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" --format json`.
-- Fixture result: 8 killed, 1 survived, 0 invalid, 0 timed out, score 88.9 percent, not partial, high confidence. The survivor is `shipping.py:6`, `>=` to `>`.
+- Fixture result at this checkpoint: 8 killed, 1 survived, 0 invalid, 0 timed out, score 88.9 percent, not partial, high confidence. The operator set was later refined, so the current fixture result is 5 killed, 1 survived, 83.3 percent. The survivor is `shipping.py:6`, `>=` to `>`.
 - Repeated runs produce the same nine mutant IDs and score. Durations and timestamps are intentionally variable.
 - The sandbox copies to a temporary directory and the tests confirm the source fixture remains unchanged.
 - Commit `5ccc6ef` (`feat: complete Phase 1 deterministic engine and tests`) is pushed to the private GitHub repository on `master`.
@@ -210,9 +230,9 @@ Tests:
 Acceptance:
 
 ```bash
-uv run testproof grade --repo fixtures/shop --all --test-cmd "pytest -q" --threshold 80
+uv run testproof grade --repo fixtures/shop --all --test-cmd "pytest -q" --threshold 90
 echo $?   # 1
-uv run testproof grade --repo fixtures/shop --all --test-cmd "pytest -q" --threshold 50
+uv run testproof grade --repo fixtures/shop --all --test-cmd "pytest -q" --threshold 80
 echo $?   # 0
 uv run pytest tests/test_report.py tests/test_cli.py -q
 ```
@@ -227,6 +247,8 @@ Checkpoint 2:
 Cut line: if the PR comment is blocked by permissions, post the report as an artifact only and document the comment step.
 
 ## Phase 3: Verified repair
+
+Status: complete and pushed at checkpoint `a0b9f05`, with follow up commits `5aca43f` and `c8edde9`.
 
 Goal: use an open source model to write missing tests, and keep only the tests the engine proves.
 
@@ -285,6 +307,79 @@ Checkpoint 3:
 
 Cut line: if the model is unreliable, reduce the prompt to one mutant, one test, and no explanation. If it still fails, ship the verifier and a manual repair workflow.
 
+## Phase 3.5: Repair hardening
+
+Status: complete and recorded at the Phase 3.5 checkpoint.
+
+Goal: make repair credible on a real repository, not only on the four line fixture.
+
+Problem: a model only loop is slow, costs money, and can produce a test that looks plausible but proves nothing. The first version also failed on empty model responses and gave the reader no evidence for the assertion value.
+
+Deliverables:
+
+- `src/testproof/probe.py` with `module_for`, `probe_cases`, and isolated execution of function calls.
+- `src/testproof/templates.py` with deterministic case generation, golden value rendering, and equivalent hints.
+- `src/testproof/repair.py` with template first repair, model fallback, rejection reasons, and apply support.
+- `src/testproof/model.py` with a model override, configurable token limit, and an explicit empty content error.
+- `src/testproof/sandbox.py` with `isolated_env` so the sandbox imports its own copy of the project.
+- `tests/test_probe.py`, `tests/test_templates.py`, and expanded repair and model tests.
+- `--model`, `--force-model`, and `--no-templates` flags.
+
+Method:
+
+1. Build candidate inputs from the mutated line, the function signature, literals in the line, existing test calls, and generic boundary values.
+2. Run the function on the original source and on the mutant in separate interpreters. The probe gives each case a timeout and never imports project code into the TestProof process.
+3. Keep only cases where the original returns a literal and the mutant returns a different literal or raises.
+4. Render one assertion per distinguishing case, using the observed original value as the expected value.
+5. If no case distinguishes the two versions and the function looks like a clamp, mark the mutant likely equivalent and skip the model unless `--force-model` is set.
+6. If templates fail on a non equivalent survivor, send the model a prompt with a worked example, the mutation hint, and the probe result.
+7. Verify every candidate in the sandbox: pass on original, fail on mutant, full suite green.
+
+Tests:
+
+- Comparison, constant, boolean, and clamp cases produce the expected distinguishing input or equivalent hint.
+- The probe reports import errors and function errors without crashing the run.
+- Template repair beats the model and makes no model call when a template candidate is kept.
+- A model test that does not kill the mutant is rejected with a reason.
+- A likely equivalent clamp mutant skips the model.
+- The model override wins over the configured model name.
+
+Acceptance:
+
+```bash
+uv run pytest -q
+uv run testproof repair --repo <real repo> --report <baseline report> --test-cmd "pytest -q" --dry-run
+uv run testproof repair --repo <real repo> --report <baseline report> --test-cmd "pytest -q" --apply
+uv run testproof grade --repo <real repo> --base <baseline ref> --test-cmd "pytest -q"
+```
+
+Real repository result, 2026-10-27:
+
+| Stage | Killed | Survived | Score | Model calls |
+| --- | --- | --- | --- | --- |
+| Baseline | 7 | 12 | 36.84 percent | 0 |
+| After verified repair | 17 | 2 | 89.47 percent | 0 |
+
+The repository had three modules (`calculator.py`, `validator.py`, `formatter.py`) and 19 mutants. The repair kept 10 tests, rejected 0 candidates, marked 2 mutants likely equivalent, and ran in about 13 seconds. Both remaining survivors are clamp comparisons (`>=` to `>` and `<=` to `<`) with no valid range that distinguishes the original from the mutant.
+
+Limits of the evidence:
+
+- One real repository is not a corpus. Phase 5 must repeat this on at least ten modules.
+- Templates cover common operator shapes. A survivor outside those shapes still depends on the model fallback.
+- Likely equivalence is a heuristic, not a proof. The report keeps the survivor and labels it instead of hiding it.
+
+The model fallback is measured separately in `docs/MODEL_BENCHMARK.md`. The benchmark ran seven OpenRouter models on the same 12 survivors with `--no-templates`. `qwen/qwen3-235b-a22b-2507` kept 9 of 10 killable survivors for under one cent, so it is the default in `src/testproof/model.py`. Free tiers and reasoning heavy models are not suitable defaults at the 1200 token cap.
+
+Checkpoint 3.5:
+
+- A real repository score rises by more than 50 points with verified tests.
+- Every kept test has a verification record.
+- Template repair works with no model key configured.
+- The model fallback is measured separately so its quality and cost are known.
+- If templates are slow, cap the case count and cap the probe timeout. Do not remove verification.
+
+Cut line: if the probe cannot import a module, keep the model fallback and record the import error. Do not weaken the verifier.
+
 ## Phase 4: Alan skill and workflow
 
 Goal: make the tool usable from an Alan session and attach the report as evidence.
@@ -294,7 +389,7 @@ Deliverables:
 - `skills/testproof/SKILL.md` with valid frontmatter.
 - Install instructions for Alan, Claude Code, Codex, Cursor, Gemini CLI, and OpenCode.
 - An automation recipe for Alan: trigger, instructions, artifact.
-- A recorded session.
+- A recorded session in `docs/DEMO.md`.
 - A test report artifact template.
 
 Skill steps:
@@ -317,6 +412,8 @@ Checkpoint 4:
 
 - The recording exists and is under 2 minutes.
 - If Alan is blocked, record OpenCode or Claude Code and document the Alan automation.
+
+Recorded session: `docs/DEMO.md`. It runs on a copy of `fixtures/shop` with no model key configured. The score moves from 83.33 percent to 100 percent, one test is kept, and no model is called. The artifact is included in the document.
 
 Cut line: if the skill cannot be installed in Alan, ship it as a portable skill with a manual install and a recorded OpenCode session.
 
@@ -402,7 +499,8 @@ Cut line: if the time is short, submit the repo, the video, and the CLI. Do not 
 | CP1 | Mon 19:30 | Fixture score is deterministic | Cut operator families |
 | CP2 | Mon 22:30 | PR gate fails and passes correctly | Ship local CLI and workflow file |
 | CP3 | Tue 11:00 | Repair raises the score with verified tests | Ship grader plus manual repair |
-| CP4 | Tue 13:00 | Skill runs in a real session | Record OpenCode and document Alan |
+| CP3.5 | Tue 12:00 | Real repo repair is credible and measured | Ship template repair and document the model fallback |
+| CP4 | Tue 13:30 | Skill runs in a real session | Record OpenCode and document Alan |
 | CP5 | Tue 17:00 | Benchmark and video are ready | Use 10 functions and a shorter video |
 | CP6 | Tue 19:00 | Fresh clone and submission are ready | Submit the minimum three artifacts |
 
