@@ -1,0 +1,31 @@
+{
+  "module_id": "parse_seconds",
+  "mutants": 8,
+  "killed_before": 5,
+  "survived_before": 3,
+  "score_before": 62.5,
+  "killed_after": 8,
+  "survived_after": 0,
+  "score_after": 100.0,
+  "kept": 3,
+  "rejected": 0,
+  "likely_equivalent": 0,
+  "template_hits": 2,
+  "model_attempts": 1,
+  "bug_before": {
+    "exit_code": 0,
+    "seconds": 0.27,
+    "pass": true,
+    "tail": "2 passed in 0.01s"
+  },
+  "bug_after": {
+    "exit_code": 1,
+    "seconds": 0.27,
+    "pass": false,
+    "tail": "3 failed, 2 passed in 0.02s"
+  },
+  "grade_before_seconds": 2.38,
+  "repair_seconds": 4.77,
+  "grade_after_seconds": 2.56,
+  "total_seconds": 9.71
+}

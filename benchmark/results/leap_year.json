@@ -1,0 +1,31 @@
+{
+  "module_id": "leap_year",
+  "mutants": 8,
+  "killed_before": 4,
+  "survived_before": 4,
+  "score_before": 50.0,
+  "killed_after": 8,
+  "survived_after": 0,
+  "score_after": 100.0,
+  "kept": 4,
+  "rejected": 0,
+  "likely_equivalent": 0,
+  "template_hits": 4,
+  "model_attempts": 0,
+  "bug_before": {
+    "exit_code": 0,
+    "seconds": 0.25,
+    "pass": true,
+    "tail": "2 passed in 0.01s"
+  },
+  "bug_after": {
+    "exit_code": 1,
+    "seconds": 0.56,
+    "pass": false,
+    "tail": "4 failed, 2 passed in 0.04s"
+  },
+  "grade_before_seconds": 2.51,
+  "repair_seconds": 3.4,
+  "grade_after_seconds": 2.68,
+  "total_seconds": 8.59
+}

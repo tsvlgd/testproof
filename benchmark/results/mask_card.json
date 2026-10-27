@@ -1,0 +1,31 @@
+{
+  "module_id": "mask_card",
+  "mutants": 7,
+  "killed_before": 5,
+  "survived_before": 2,
+  "score_before": 71.42857142857143,
+  "killed_after": 6,
+  "survived_after": 1,
+  "score_after": 85.71428571428571,
+  "kept": 1,
+  "rejected": 1,
+  "likely_equivalent": 0,
+  "template_hits": 1,
+  "model_attempts": 1,
+  "bug_before": {
+    "exit_code": 0,
+    "seconds": 0.48,
+    "pass": true,
+    "tail": "2 passed in 0.01s"
+  },
+  "bug_after": {
+    "exit_code": 1,
+    "seconds": 0.3,
+    "pass": false,
+    "tail": "1 failed, 2 passed in 0.02s"
+  },
+  "grade_before_seconds": 2.7,
+  "repair_seconds": 3.39,
+  "grade_after_seconds": 2.24,
+  "total_seconds": 8.33
+}

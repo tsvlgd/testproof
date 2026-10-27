@@ -1,0 +1,31 @@
+{
+  "module_id": "clamp_page",
+  "mutants": 7,
+  "killed_before": 3,
+  "survived_before": 4,
+  "score_before": 42.857142857142854,
+  "killed_after": 6,
+  "survived_after": 1,
+  "score_after": 85.71428571428571,
+  "kept": 3,
+  "rejected": 1,
+  "likely_equivalent": 0,
+  "template_hits": 3,
+  "model_attempts": 1,
+  "bug_before": {
+    "exit_code": 0,
+    "seconds": 0.25,
+    "pass": true,
+    "tail": "2 passed in 0.01s"
+  },
+  "bug_after": {
+    "exit_code": 1,
+    "seconds": 0.24,
+    "pass": false,
+    "tail": "2 failed, 3 passed in 0.02s"
+  },
+  "grade_before_seconds": 2.09,
+  "repair_seconds": 4.82,
+  "grade_after_seconds": 2.13,
+  "total_seconds": 9.04
+}

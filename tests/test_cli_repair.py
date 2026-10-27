@@ -131,6 +131,37 @@ def test_repair_dry_run_uses_templates(tmp_path: Path, monkeypatch) -> None:
     assert "assert shipping_fee(50) == 0" in result.stdout
 
 
+def test_repair_json_output_is_machine_readable(tmp_path: Path, monkeypatch) -> None:
+    repo, report = _prepare(tmp_path, monkeypatch)
+
+    result = runner.invoke(
+        app,
+        [
+            "repair",
+            "--repo",
+            str(repo),
+            "--report",
+            str(report),
+            "--test-cmd",
+            "python -m pytest -q",
+            "--dry-run",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert data["model"] == "unavailable"
+    assert len(data["kept"]) == 1
+    assert set(data["kept"][0]) == {"mutant_id", "test_code"}
+    assert "assert shipping_fee(50) == 0" in data["kept"][0]["test_code"]
+    assert data["rejected"] == []
+    assert "Deterministic template hits" not in result.stdout
+    assert data["template_hits"] == 1
+    assert data["model_attempts"] == 0
+    assert data["applied"] is False
+
+
 def test_repair_apply_writes_verified_test(tmp_path: Path, monkeypatch) -> None:
     repo, report = _prepare(tmp_path, monkeypatch)
 

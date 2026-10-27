@@ -1,29 +1,8 @@
 # TestProof
 
-TestProof grades whether a test suite actually catches bugs. It runs mutation testing on the lines a pull request changed, reports the bugs the tests miss, and uses an open source model to write the missing tests. A deterministic engine keeps a proposed test only when it passes on the original code and fails on the mutant.
+TestProof grades whether a test suite actually catches bugs. It runs mutation testing on the lines a pull request changed, reports the bugs the tests miss, and writes the missing tests itself. A deterministic engine keeps a test only when it passes on the original code and fails on the planted bug.
 
 One line: passing tests are not the same as strong tests.
-
-New here? Read `docs/ORIENTATION.md` first. It explains the product, why Alan is involved, what the event allows, what exists today, the phase map, and the corrected diff command.
-
-## Why this exists
-
-AI agents now write code and tests in the same pass. The tests pass, coverage looks healthy, and a human approves. But a passing test only proves that the code ran. It does not prove that the test would notice if the code were wrong.
-
-The research is clear:
-
-- Meta used LLM guided mutation testing in production and reported that privacy engineers accepted 73 percent of the generated tests.
-- Google generated almost 17 million mutants across 760,000 code changes and surfaced 2 million during review.
-- A 2026 study of LLM generated tests found that a simple prompt reached a 53 percent mutation score, and that generated tests often miss boundaries.
-
-The problem is real. The tool space is crowded. TestProof competes on the workflow, not on a new mutation algorithm:
-
-1. Diff scoped grading that fits a normal CI budget.
-2. Verified repair. The model proposes, the engine proves the kill.
-3. One report contract across the CLI, a skill, a GitHub Action, and Alan.
-4. Honest reporting of partial scores, invalid mutants, and suspected equivalents.
-
-Read `docs/BLUEPRINT.md` for the full judgment, architecture, and risk analysis.
 
 ## How it works
 
@@ -54,116 +33,131 @@ diff resolver  ->  Python adapter  ->  sandbox  ->  project test command
 
 The mutation engine is deterministic. No model call happens in discovery, execution, classification, or scoring. Repair builds candidate inputs from the mutation and proves them by running the original and the mutant in an isolated interpreter. The model is a fallback for survivors that templates cannot handle. The verifier decides what is kept.
 
-## What ships
+## Install
 
-| Surface | Purpose | Status |
-| --- | --- | --- |
-| `testproof` CLI | Grade changed code and repair survivors | Working |
-| `skills/testproof/SKILL.md` | Teach an agent when and how to run the loop | Final at 0.2.0 with install paths |
-| GitHub Action | Gate a pull request on test strength | Working |
-| Report schema | Shared contract for every surface | Working |
-| Static report viewer | Demo surface for the hackathon video | Planned for Phase 5 |
-| Remote MCP server | Alan marketplace plugin | Roadmap |
+Install the CLI as a local tool. No PyPI package is published yet, so install from the git repository:
 
-The current repository contains the deterministic Python engine, Markdown and JSON reports, threshold gating, the GitHub Action, and verified repair. Repair runs deterministic templates first and falls back to an open source model. Every kept test is verified in a sandbox: it must pass on the original code, fail on the mutant, and leave the full suite green.
+```bash
+# One off use with uvx
+uvx --from git+https://github.com/tsvlgd/testproof testproof --version
+
+# Persistent install with uv (recommended)
+uv tool install git+https://github.com/tsvlgd/testproof
+testproof --version
+
+# Or with pipx
+pipx install git+https://github.com/tsvlgd/testproof
+```
+
+From a local clone:
+
+```bash
+cd /path/to/testproof
+uv tool install --editable .
+```
+
+After installation, `testproof` is on your PATH. You can use `testproof` directly without `uv run`.
+
+## Verify the CLI
+
+The verification order is: CLI first, then skill, then Alan. Same commands, same report schema. Do not move to the next step until the previous one is verified.
+
+### 1. Grade the weak fixture
+
+```bash
+testproof grade \
+  --repo fixtures/shop \
+  --all \
+  --test-cmd "python -m pytest -q" \
+  --format json \
+  --output /tmp/tp-report.json
+```
+
+Expect 5 killed, 1 survived, score about 83.33 percent. The survivor is the free shipping boundary at 50.
+
+### 2. Repair in dry run
+
+```bash
+testproof repair \
+  --repo fixtures/shop \
+  --report /tmp/tp-report.json \
+  --test-cmd "python -m pytest -q" \
+  --dry-run
+```
+
+Expect Kept 1, template hits 1, model attempts 0. `Model unavailable` is a notice, not a failure. Templates do not need a model key.
+
+### 3. Apply the verified test
+
+```bash
+testproof repair \
+  --repo fixtures/shop \
+  --report /tmp/tp-report.json \
+  --test-cmd "python -m pytest -q" \
+  --apply
+```
+
+### 4. Re grade
+
+```bash
+testproof grade \
+  --repo fixtures/shop \
+  --all \
+  --test-cmd "python -m pytest -q" \
+  --format json \
+  --output /tmp/tp-fixed.json
+```
+
+Expect score 100, survived 0.
+
+### 5. Inspect the applied test
+
+Open `fixtures/shop/test_shipping.py` and look for `test_repair_`. That is the proof: a test that passed on the original code and failed on the planted mutant. The engine kept it only because it proved that.
+
+## Measured results
+
+Full corpus results are in `benchmark/results.md`. Reproduce with:
+
+```bash
+uv run python benchmark/build_corpus.py
+uv run python benchmark/run.py
+```
+
+The benchmark runs 12 synthetic modules with weak suites and known bug versions. It grades, repairs with apply, re grades, then runs the repaired suite against the bug. Detection before repair is by construction: the weak suite passes on the bug. Detection after repair is measured.
+
+| Evidence | Before | After | Kept | Model calls |
+| --- | --- | --- | --- | --- |
+| Fixture (6 mutants) | 83.33 percent | 100 percent | 1 | 0 |
+| Real repository (19 mutants) | 36.84 percent | 89.47 percent | 10 | 0 |
+| Benchmark corpus (68 mutants) | 57.35 percent | 92.65 percent | 24 | 6 |
 
 Real repository evidence: a three module repository with 19 mutants moved from 36.84 percent to 89.47 percent after repair. The engine kept 10 tests with deterministic templates and made no model calls. The two remaining survivors are clamp comparisons that no valid input can distinguish, so they are marked likely equivalent.
 
-## Quick start
+## Use with Alan
 
-```bash
-uv sync
-uv run testproof --version
-uv run pytest -q
-make check
-```
-
-Install the agent skill (any agent that reads SKILL.md):
+Install the skill for any SKILL.md compatible agent:
 
 ```bash
 mkdir -p ~/.claude/skills
 cp -R skills/testproof ~/.claude/skills/testproof
 ```
 
-Paths for every agent, the Alan automation recipe, and the artifact template are in `docs/WORKFLOW.md`.
+Alan: open this repository as the workspace so `skills/testproof/` is already there, or point Alan's skill install at that folder. Confirm the agent lists a skill named `testproof` before you trust it.
 
-Try the diff resolver on any git repository:
+Automation recipe:
 
-```bash
-# Uncommitted work, including staged and untracked files
-uv run testproof diff --repo /path/to/repo
-
-# Everything since the previous commit, including the working tree
-uv run testproof diff --base HEAD~1 --repo /path/to/repo
-
-# Committed pull request diff only
-uv run testproof diff --base origin/main --head HEAD --repo /path/to/repo
-```
-
-`testproof diff` is not a `git status` clone. It resolves a change set from a base to a target, and the base decides what is included. The output names both sides so the comparison is explicit. In JSON, the working tree target is the string `WORKTREE`.
-
-The demonstration fixture is intentionally weak. Its tests pass with full line coverage and still miss the boundary at 50. It is not its own Git repository, so use `--all` to grade its Python files. In normal Git repositories, grading stays diff scoped by default.
+1. Trigger: pull request opened, or review requested.
+2. Instructions: run the testproof skill, grade the diff, attach the JSON and Markdown report, repair only if the score is under the threshold, re grade, post the before and after. Do not approve or merge.
+3. Command the automation runs:
 
 ```bash
-cd fixtures/shop
-python -m pytest -q
-python -m pytest --cov=. --cov-report=term-missing
-
-cd ../..
-uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" --format json
+testproof grade --repo . --base "origin/$BASE_REF" --head HEAD \
+  --test-cmd "pytest -q" --threshold 80 \
+  --format json --output .testproof/report.json
 ```
 
-Grade a real repository diff, then repair the survivors:
-
-```bash
-uv run testproof grade \
-  --repo /path/to/repo \
-  --base origin/main \
-  --test-cmd "pytest -q" \
-  --threshold 80 \
-  --format json \
-  --output .testproof/report.json
-
-uv run testproof repair \
-  --repo /path/to/repo \
-  --report .testproof/report.json \
-  --test-cmd "pytest -q" \
-  --dry-run
-
-uv run testproof repair \
-  --repo /path/to/repo \
-  --report .testproof/report.json \
-  --test-cmd "pytest -q" \
-  --apply
-```
-
-Repair uses deterministic templates by default and does not need a model key. To enable the model fallback, set `MODEL_API_KEY` or create `~/.config/testproof/model.json`. The model is only asked when templates cannot produce a killing input. The default model is `qwen/qwen3-235b-a22b-2507`, measured in `docs/MODEL_BENCHMARK.md`. Use `--model` to override the configured model and `--force-model` to ask the model even when the probe suggests a mutant is equivalent.
-
-## Repository layout
-
-```text
-testproof/
-├── AGENTS.md                 Rules for agents working in this repo
-├── CONSTRAINTS.md            The quality bar with numbers
-├── README.md
-├── pyproject.toml
-├── Makefile
-├── docs/
-│   ├── BLUEPRINT.md          End to end product and system design
-│   ├── BUILD_PLAN.md         Phase plan, checkpoints, and cut lines
-│   ├── CROSS_RESEARCH.md     Evidence and competitive analysis
-│   ├── EVAL.md               Benchmark and evaluation design
-│   ├── METHODOLOGY.md        Build and evidence method
-│   ├── WORKFLOW.md           Alan, CI, and local flows
-│   ├── GLOSSARY.md           Domain terms
-│   └── INIT_PROMPT.md        Paste ready coding session prompt
-├── diagrams/                 Mermaid sources and Excalidraw canvas
-├── skills/testproof/         Portable agent skill
-├── src/testproof/            CLI and diff resolver
-├── tests/                    Unit tests
-├── fixtures/shop/            Deliberately weak demo suite
-└── .github/workflows/        CI and a manual TestProof preview
-```
+4. Put `MODEL_API_KEY` in Alan's secret store only if you want the model fallback. Template repair works without it.
+5. Run the automation once by hand on a test pull request. If the agent lists the skill but never loads it, the folder name and the `name` field in `SKILL.md` do not match.
 
 ## Design principles
 
@@ -175,35 +169,42 @@ testproof/
 - Treat the report as the contract. Every integration reads the same schema.
 - Say what the score does not prove. A high score is evidence, not correctness.
 
-## Build status
+## Repository layout
 
-| Phase | Output | Gate | Status |
-| --- | --- | --- | --- |
-| 0 Foundation | Repo, CLI, diff resolver, fixture, CI | Complete | Complete |
-| 1 Deterministic engine | Mutation, sandbox, runner, score, JSON | Complete at Phase 1 checkpoint | Complete |
-| 2 Report and CI gate | Markdown, threshold, GitHub Action | Pull request fails below threshold | Complete |
-| 3 Verified repair | Model client, verifier, apply | Score rises with verified tests | Complete |
-| 3.5 Repair hardening | Probe, templates, model benchmark | Real repository repair is credible | Complete |
-| 4 Alan skill | Skill, automation recipe, artifact | Runs in a real session | Complete |
-| 5 Benchmark and demo | Corpus, metrics, README, video | Before and after are measurable | Next |
-| 6 Hardening | Errors, license, release, submission | Fresh clone works | Planned |
-
-Phase 0 through Phase 4 are complete at the current checkpoint. `make check-full` is green with 151 tests and 90.16 percent coverage. The fixture grade is reproducible: 5 mutants are killed, 1 boundary mutant survives, for a score of 83.3 percent; after repair the fixture reaches 100 percent (`docs/DEMO.md`). The real repository run moved from 36.84 percent to 89.47 percent after verified repair, with 10 kept tests and no model calls. Seven OpenRouter models were benchmarked for the fallback (`docs/MODEL_BENCHMARK.md`).
-
-The full gate for each phase is in `docs/BUILD_PLAN.md`.
-
-## Documentation
-
-- `docs/ORIENTATION.md` for the plain language map of the product, the event rules, and the current phase.
-- `docs/BLUEPRINT.md` for requirements, architecture, ADRs, and risks.
-- `docs/METHODOLOGY.md` for the build and evidence method.
-- `docs/BUILD_PLAN.md` for the hour by hour plan and checkpoints.
-- `docs/CROSS_RESEARCH.md` for the evidence and the caveats.
-- `docs/EVAL.md` for the benchmark and the falsifiable claims.
-- `docs/MODEL_BENCHMARK.md` for the measured model fallback comparison.
-- `docs/WORKFLOW.md` for the Alan, CI, and local flows.
-- `docs/DEMO.md` for the recorded end to end session on the fixture.
-- `docs/INIT_PROMPT.md` for the prompt that starts the coding session.
+```text
+testproof/
+├── README.md
+├── CONSTRAINTS.md
+├── LICENSE
+├── pyproject.toml
+├── Makefile
+├── benchmark/
+│   ├── build_corpus.py    Builds and validates the 12 module corpus
+│   ├── corpus/            Original modules with weak suites
+│   ├── bugs/              Known bug versions
+│   ├── run.py             Grade, repair, regrade, bug check
+│   ├── results.md         Measured before and after
+│   └── results/           Raw JSON per run
+├── skills/testproof/
+│   └── SKILL.md           Portable agent skill
+├── src/testproof/
+│   ├── cli.py             grade, repair, report, diff commands
+│   ├── engine.py          Mutation discovery and scoring
+│   ├── repair.py          Template first repair with model fallback
+│   ├── probe.py           Isolated probe for candidate inputs
+│   ├── templates.py       Deterministic test case generation
+│   ├── model.py           OpenRouter model client
+│   ├── sandbox.py         Sandboxed execution
+│   ├── runner.py          Test command execution with timeouts
+│   ├── report.py          JSON and Markdown rendering
+│   ├── diff.py            Diff resolver
+│   ├── models.py          Report schema
+│   ├── config.py          Model config file support
+│   └── adapters/          Python mutation adapter
+├── tests/                 Unit tests
+├── fixtures/shop/         Weak fixture for demos
+└── .github/workflows/     CI and TestProof preview
+```
 
 ## License
 

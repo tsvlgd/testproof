@@ -1,0 +1,31 @@
+{
+  "module_id": "last_page",
+  "mutants": 8,
+  "killed_before": 2,
+  "survived_before": 6,
+  "score_before": 25.0,
+  "killed_after": 7,
+  "survived_after": 1,
+  "score_after": 87.5,
+  "kept": 5,
+  "rejected": 1,
+  "likely_equivalent": 0,
+  "template_hits": 5,
+  "model_attempts": 1,
+  "bug_before": {
+    "exit_code": 0,
+    "seconds": 0.23,
+    "pass": true,
+    "tail": "2 passed in 0.01s"
+  },
+  "bug_after": {
+    "exit_code": 1,
+    "seconds": 0.25,
+    "pass": false,
+    "tail": "2 failed, 5 passed in 0.02s"
+  },
+  "grade_before_seconds": 2.44,
+  "repair_seconds": 6.65,
+  "grade_after_seconds": 2.51,
+  "total_seconds": 11.6
+}

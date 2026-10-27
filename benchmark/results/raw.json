@@ -1,0 +1,381 @@
+{
+  "meta": {
+    "date": "2026-10-27",
+    "model_configured": true,
+    "test_cmd": "python -m pytest -q"
+  },
+  "rows": [
+    {
+      "module_id": "c_to_f",
+      "mutants": 4,
+      "killed_before": 2,
+      "survived_before": 2,
+      "score_before": 50.0,
+      "killed_after": 4,
+      "survived_after": 0,
+      "score_after": 100.0,
+      "kept": 2,
+      "rejected": 0,
+      "likely_equivalent": 0,
+      "template_hits": 2,
+      "model_attempts": 0,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.27,
+        "pass": true,
+        "tail": "1 passed in 0.01s"
+      },
+      "bug_after": {
+        "exit_code": 1,
+        "seconds": 0.27,
+        "pass": false,
+        "tail": "2 failed, 1 passed in 0.02s"
+      },
+      "grade_before_seconds": 1.37,
+      "repair_seconds": 1.73,
+      "grade_after_seconds": 1.38,
+      "total_seconds": 4.48
+    },
+    {
+      "module_id": "check_password",
+      "mutants": 5,
+      "killed_before": 3,
+      "survived_before": 2,
+      "score_before": 60.0,
+      "killed_after": 4,
+      "survived_after": 1,
+      "score_after": 80.0,
+      "kept": 1,
+      "rejected": 1,
+      "likely_equivalent": 0,
+      "template_hits": 1,
+      "model_attempts": 1,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.28,
+        "pass": true,
+        "tail": "2 passed in 0.00s"
+      },
+      "bug_after": {
+        "exit_code": 1,
+        "seconds": 0.26,
+        "pass": false,
+        "tail": "1 failed, 2 passed in 0.02s"
+      },
+      "grade_before_seconds": 1.63,
+      "repair_seconds": 3.78,
+      "grade_after_seconds": 1.66,
+      "total_seconds": 7.07
+    },
+    {
+      "module_id": "clamp_page",
+      "mutants": 7,
+      "killed_before": 3,
+      "survived_before": 4,
+      "score_before": 42.857142857142854,
+      "killed_after": 6,
+      "survived_after": 1,
+      "score_after": 85.71428571428571,
+      "kept": 3,
+      "rejected": 1,
+      "likely_equivalent": 0,
+      "template_hits": 3,
+      "model_attempts": 1,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.25,
+        "pass": true,
+        "tail": "2 passed in 0.01s"
+      },
+      "bug_after": {
+        "exit_code": 1,
+        "seconds": 0.24,
+        "pass": false,
+        "tail": "2 failed, 3 passed in 0.02s"
+      },
+      "grade_before_seconds": 2.09,
+      "repair_seconds": 4.82,
+      "grade_after_seconds": 2.13,
+      "total_seconds": 9.04
+    },
+    {
+      "module_id": "coupon_discount",
+      "mutants": 6,
+      "killed_before": 5,
+      "survived_before": 1,
+      "score_before": 83.33333333333334,
+      "killed_after": 5,
+      "survived_after": 1,
+      "score_after": 83.33333333333334,
+      "kept": 0,
+      "rejected": 1,
+      "likely_equivalent": 0,
+      "template_hits": 0,
+      "model_attempts": 1,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.24,
+        "pass": true,
+        "tail": "2 passed in 0.01s"
+      },
+      "bug_after": {
+        "exit_code": 0,
+        "seconds": 0.24,
+        "pass": true,
+        "tail": "2 passed in 0.00s"
+      },
+      "grade_before_seconds": 1.84,
+      "repair_seconds": 3.93,
+      "grade_after_seconds": 1.84,
+      "total_seconds": 7.61
+    },
+    {
+      "module_id": "grade_band",
+      "mutants": 3,
+      "killed_before": 0,
+      "survived_before": 3,
+      "score_before": 0.0,
+      "killed_after": 3,
+      "survived_after": 0,
+      "score_after": 100.0,
+      "kept": 3,
+      "rejected": 0,
+      "likely_equivalent": 0,
+      "template_hits": 3,
+      "model_attempts": 0,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.25,
+        "pass": true,
+        "tail": "2 passed in 0.01s"
+      },
+      "bug_after": {
+        "exit_code": 1,
+        "seconds": 0.25,
+        "pass": false,
+        "tail": "1 failed, 4 passed in 0.02s"
+      },
+      "grade_before_seconds": 1.1,
+      "repair_seconds": 2.58,
+      "grade_after_seconds": 1.15,
+      "total_seconds": 4.83
+    },
+    {
+      "module_id": "intervals_overlap",
+      "mutants": 4,
+      "killed_before": 2,
+      "survived_before": 2,
+      "score_before": 50.0,
+      "killed_after": 4,
+      "survived_after": 0,
+      "score_after": 100.0,
+      "kept": 2,
+      "rejected": 0,
+      "likely_equivalent": 0,
+      "template_hits": 2,
+      "model_attempts": 0,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.25,
+        "pass": true,
+        "tail": "2 passed in 0.00s"
+      },
+      "bug_after": {
+        "exit_code": 1,
+        "seconds": 0.25,
+        "pass": false,
+        "tail": "1 failed, 3 passed in 0.02s"
+      },
+      "grade_before_seconds": 1.35,
+      "repair_seconds": 1.76,
+      "grade_after_seconds": 1.39,
+      "total_seconds": 4.5
+    },
+    {
+      "module_id": "last_page",
+      "mutants": 8,
+      "killed_before": 2,
+      "survived_before": 6,
+      "score_before": 25.0,
+      "killed_after": 7,
+      "survived_after": 1,
+      "score_after": 87.5,
+      "kept": 5,
+      "rejected": 1,
+      "likely_equivalent": 0,
+      "template_hits": 5,
+      "model_attempts": 1,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.23,
+        "pass": true,
+        "tail": "2 passed in 0.01s"
+      },
+      "bug_after": {
+        "exit_code": 1,
+        "seconds": 0.25,
+        "pass": false,
+        "tail": "2 failed, 5 passed in 0.02s"
+      },
+      "grade_before_seconds": 2.44,
+      "repair_seconds": 6.65,
+      "grade_after_seconds": 2.51,
+      "total_seconds": 11.6
+    },
+    {
+      "module_id": "leap_year",
+      "mutants": 8,
+      "killed_before": 4,
+      "survived_before": 4,
+      "score_before": 50.0,
+      "killed_after": 8,
+      "survived_after": 0,
+      "score_after": 100.0,
+      "kept": 4,
+      "rejected": 0,
+      "likely_equivalent": 0,
+      "template_hits": 4,
+      "model_attempts": 0,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.25,
+        "pass": true,
+        "tail": "2 passed in 0.01s"
+      },
+      "bug_after": {
+        "exit_code": 1,
+        "seconds": 0.56,
+        "pass": false,
+        "tail": "4 failed, 2 passed in 0.04s"
+      },
+      "grade_before_seconds": 2.51,
+      "repair_seconds": 3.4,
+      "grade_after_seconds": 2.68,
+      "total_seconds": 8.59
+    },
+    {
+      "module_id": "mask_card",
+      "mutants": 7,
+      "killed_before": 5,
+      "survived_before": 2,
+      "score_before": 71.42857142857143,
+      "killed_after": 6,
+      "survived_after": 1,
+      "score_after": 85.71428571428571,
+      "kept": 1,
+      "rejected": 1,
+      "likely_equivalent": 0,
+      "template_hits": 1,
+      "model_attempts": 1,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.48,
+        "pass": true,
+        "tail": "2 passed in 0.01s"
+      },
+      "bug_after": {
+        "exit_code": 1,
+        "seconds": 0.3,
+        "pass": false,
+        "tail": "1 failed, 2 passed in 0.02s"
+      },
+      "grade_before_seconds": 2.7,
+      "repair_seconds": 3.39,
+      "grade_after_seconds": 2.24,
+      "total_seconds": 8.33
+    },
+    {
+      "module_id": "order_status",
+      "mutants": 4,
+      "killed_before": 4,
+      "survived_before": 0,
+      "score_before": 100.0,
+      "killed_after": 4,
+      "survived_after": 0,
+      "score_after": 100.0,
+      "kept": 0,
+      "rejected": 0,
+      "likely_equivalent": 0,
+      "template_hits": 0,
+      "model_attempts": 0,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.27,
+        "pass": true,
+        "tail": "2 passed in 0.02s"
+      },
+      "bug_after": {
+        "exit_code": 0,
+        "seconds": 0.25,
+        "pass": true,
+        "tail": "2 passed in 0.00s"
+      },
+      "grade_before_seconds": 1.42,
+      "repair_seconds": 0.16,
+      "grade_after_seconds": 1.4,
+      "total_seconds": 2.98
+    },
+    {
+      "module_id": "parse_seconds",
+      "mutants": 8,
+      "killed_before": 5,
+      "survived_before": 3,
+      "score_before": 62.5,
+      "killed_after": 8,
+      "survived_after": 0,
+      "score_after": 100.0,
+      "kept": 3,
+      "rejected": 0,
+      "likely_equivalent": 0,
+      "template_hits": 2,
+      "model_attempts": 1,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.27,
+        "pass": true,
+        "tail": "2 passed in 0.01s"
+      },
+      "bug_after": {
+        "exit_code": 1,
+        "seconds": 0.27,
+        "pass": false,
+        "tail": "3 failed, 2 passed in 0.02s"
+      },
+      "grade_before_seconds": 2.38,
+      "repair_seconds": 4.77,
+      "grade_after_seconds": 2.56,
+      "total_seconds": 9.71
+    },
+    {
+      "module_id": "retry_delay",
+      "mutants": 4,
+      "killed_before": 4,
+      "survived_before": 0,
+      "score_before": 100.0,
+      "killed_after": 4,
+      "survived_after": 0,
+      "score_after": 100.0,
+      "kept": 0,
+      "rejected": 0,
+      "likely_equivalent": 0,
+      "template_hits": 0,
+      "model_attempts": 0,
+      "bug_before": {
+        "exit_code": 0,
+        "seconds": 0.3,
+        "pass": true,
+        "tail": "2 passed in 0.01s"
+      },
+      "bug_after": {
+        "exit_code": 0,
+        "seconds": 0.25,
+        "pass": true,
+        "tail": "2 passed in 0.00s"
+      },
+      "grade_before_seconds": 1.44,
+      "repair_seconds": 0.15,
+      "grade_after_seconds": 1.44,
+      "total_seconds": 3.03
+    }
+  ]
+}

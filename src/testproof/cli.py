@@ -380,6 +380,13 @@ def repair_command(
             help="Skip deterministic templates and ask the model for every survivor.",
         ),
     ] = False,
+    as_json: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Emit the repair result as JSON instead of a human summary.",
+        ),
+    ] = False,
 ) -> None:
     """Repair survivors with deterministic templates and a model fallback."""
     import json as _json
@@ -440,6 +447,23 @@ def repair_command(
         force_model=force_model,
         use_templates=not no_templates,
     )
+
+    if as_json:
+        payload = {
+            "model": model_name,
+            "applied": result.applied,
+            "template_hits": result.template_hits,
+            "model_attempts": result.model_attempts,
+            "kept": [
+                {"mutant_id": mutant_id, "test_code": code} for mutant_id, code in result.kept
+            ],
+            "rejected": [{"test_id": r.test_id, "reason": r.reason} for r in result.rejected],
+            "likely_equivalent": list(result.equivalent),
+        }
+        typer.echo(json.dumps(payload, indent=2))
+        if model_client is not None:
+            model_client.close()
+        return
 
     typer.echo(f"Model: {model_name}")
     typer.echo(f"Kept: {len(result.kept)}")

@@ -25,3 +25,18 @@ build/
 .DS_Store
 .idea/
 .vscode/
+
+# Internal build docs (local only, not on the remote)
+docs/INIT_PROMPT.md
+docs/WORKFLOW.md
+docs/BUILD_PLAN.md
+docs/DEMO.md
+docs/CROSS_RESEARCH.md
+docs/ORIENTATION.md
+docs/BLUEPRINT.md
+docs/METHODOLOGY.md
+docs/EVAL.md
+docs/GLOSSARY.md
+docs/MODEL_BENCHMARK.md
+AGENTS.md
+diagrams/

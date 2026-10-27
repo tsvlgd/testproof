@@ -1,0 +1,31 @@
+{
+  "module_id": "intervals_overlap",
+  "mutants": 4,
+  "killed_before": 2,
+  "survived_before": 2,
+  "score_before": 50.0,
+  "killed_after": 4,
+  "survived_after": 0,
+  "score_after": 100.0,
+  "kept": 2,
+  "rejected": 0,
+  "likely_equivalent": 0,
+  "template_hits": 2,
+  "model_attempts": 0,
+  "bug_before": {
+    "exit_code": 0,
+    "seconds": 0.25,
+    "pass": true,
+    "tail": "2 passed in 0.00s"
+  },
+  "bug_after": {
+    "exit_code": 1,
+    "seconds": 0.25,
+    "pass": false,
+    "tail": "1 failed, 3 passed in 0.02s"
+  },
+  "grade_before_seconds": 1.35,
+  "repair_seconds": 1.76,
+  "grade_after_seconds": 1.39,
+  "total_seconds": 4.5
+}
