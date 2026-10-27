@@ -53,6 +53,7 @@ make check-full
 - A proposed test is kept only if it passes on the original code and fails on the mutant. The model proposes, the engine verifies.
 - No unimplemented stubs. No skipped tests. No weakened constraints.
 - No secrets in source, logs, reports, or test fixtures.
+- strictly follow the docs/*.md (make sure they correlate and consistent and update with plans and disucssion and changes ) and follow them strictly and if there's any architectural and feature changes have got then make sure to update them on the fly but always follow and keep them consistent with build plan and status (state and steps).
 - Every phase ends with a runnable command, tests, and a checkpoint note.
 - Commit after each phase or if there's important checkpoint of major change or refactor or feature additions within a phase comes in that aslo to be commited or pushed don't wait for the phase to be completed or pusehd with a conventional commit message.
 
