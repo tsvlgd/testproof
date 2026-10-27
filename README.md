@@ -59,7 +59,7 @@ The mutation engine is deterministic. No model call happens in discovery, execut
 | Surface | Purpose | Status |
 | --- | --- | --- |
 | `testproof` CLI | Grade changed code and repair survivors | Working |
-| `skills/testproof/SKILL.md` | Teach an agent when and how to run the loop | Drafted, final pass in Phase 4 |
+| `skills/testproof/SKILL.md` | Teach an agent when and how to run the loop | Final at 0.2.0 with install paths |
 | GitHub Action | Gate a pull request on test strength | Working |
 | Report schema | Shared contract for every surface | Working |
 | Static report viewer | Demo surface for the hackathon video | Planned for Phase 5 |
@@ -77,6 +77,15 @@ uv run testproof --version
 uv run pytest -q
 make check
 ```
+
+Install the agent skill (any agent that reads SKILL.md):
+
+```bash
+mkdir -p ~/.claude/skills
+cp -R skills/testproof ~/.claude/skills/testproof
+```
+
+Paths for every agent, the Alan automation recipe, and the artifact template are in `docs/WORKFLOW.md`.
 
 Try the diff resolver on any git repository:
 
@@ -175,11 +184,11 @@ testproof/
 | 2 Report and CI gate | Markdown, threshold, GitHub Action | Pull request fails below threshold | Complete |
 | 3 Verified repair | Model client, verifier, apply | Score rises with verified tests | Complete |
 | 3.5 Repair hardening | Probe, templates, model benchmark | Real repository repair is credible | Complete |
-| 4 Alan skill | Skill, automation recipe, artifact | Runs in a real session | Next |
-| 5 Benchmark and demo | Corpus, metrics, README, video | Before and after are measurable | Planned |
+| 4 Alan skill | Skill, automation recipe, artifact | Runs in a real session | Complete |
+| 5 Benchmark and demo | Corpus, metrics, README, video | Before and after are measurable | Next |
 | 6 Hardening | Errors, license, release, submission | Fresh clone works | Planned |
 
-Phase 0 through Phase 3.5 are complete at the current checkpoint. `make check-full` is green. The fixture grade is reproducible: 5 mutants are killed, 1 boundary mutant survives, for a score of 83.3 percent. The real repository run moved from 36.84 percent to 89.47 percent after verified repair, with 10 kept tests and no model calls.
+Phase 0 through Phase 4 are complete at the current checkpoint. `make check-full` is green with 151 tests and 90.16 percent coverage. The fixture grade is reproducible: 5 mutants are killed, 1 boundary mutant survives, for a score of 83.3 percent; after repair the fixture reaches 100 percent (`docs/DEMO.md`). The real repository run moved from 36.84 percent to 89.47 percent after verified repair, with 10 kept tests and no model calls. Seven OpenRouter models were benchmarked for the fallback (`docs/MODEL_BENCHMARK.md`).
 
 The full gate for each phase is in `docs/BUILD_PLAN.md`.
 

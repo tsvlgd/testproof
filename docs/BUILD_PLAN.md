@@ -38,9 +38,9 @@ gantt
 
 ## Current build status
 
-Phases 0, 1, 2, and 3 are complete and pushed. Phase 3.5 is complete and recorded below. Phase 4 is next.
+Phases 0, 1, 2, and 3 are complete and pushed. Phase 3.5 and Phase 4 are complete and recorded below. Phase 5 is next.
 
-Latest pushed checkpoint: `c8edde9` (`feat: add config file support for model client`).
+Latest pushed checkpoint: `7018ce1` (`feat: deterministic first repair with verified model fallback`).
 
 Checkpoint 3.5 note, 2026-10-27:
 
@@ -384,6 +384,8 @@ Cut line: if the probe cannot import a module, keep the model fallback and recor
 
 Goal: make the tool usable from an Alan session and attach the report as evidence.
 
+Status: complete. The portable skill, install paths, Alan automation, artifact template, and a recorded fixture session are in place at the Phase 4 checkpoint.
+
 Deliverables:
 
 - `skills/testproof/SKILL.md` with valid frontmatter.
@@ -414,6 +416,14 @@ Checkpoint 4:
 - If Alan is blocked, record OpenCode or Claude Code and document the Alan automation.
 
 Recorded session: `docs/DEMO.md`. It runs on a copy of `fixtures/shop` with no model key configured. The score moves from 83.33 percent to 100 percent, one test is kept, and no model is called. The artifact is included in the document.
+
+Checkpoint 4 note, 2026-10-27:
+
+- `skills/testproof/SKILL.md` is the final portable skill at version 0.2.0 with an install section and the current repair flow.
+- `docs/WORKFLOW.md` carries the install table for Alan, Claude Code, Codex, Cursor, Gemini CLI, OpenCode, and `~/.agents/skills`, the Alan automation recipe with the exact grade command, the artifact template with verification fields, and the failure table for empty model content.
+- `docs/DEMO.md` is the recorded session: 4 commands, about 15 seconds total, 83.33 to 100 percent, 1 kept test, 0 model calls, 0 rejected, artifact included.
+- The filled artifact example is in `docs/DEMO.md`; the blank template is in `docs/WORKFLOW.md`.
+- The demo video is Phase 5 work, per the cut line: the transcript exists, the video recording waits for the corpus and the README polish.
 
 Cut line: if the skill cannot be installed in Alan, ship it as a portable skill with a manual install and a recorded OpenCode session.
 

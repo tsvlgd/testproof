@@ -45,24 +45,24 @@ Phase 0, Foundation: complete.
 Phase 1, Deterministic engine: complete.
 Phase 2, Report and CI gate: complete.
 Phase 3, Verified repair: complete.
-Phase 3.5, Repair hardening: complete. Deterministic probe and templates, chained prompt, model fallback, real repository repair from 36.84 to 89.47 percent.
-Phase 4, Alan skill and workflow: next. Final skill, install instructions, Alan automation recipe, artifact template, recorded session.
-Phase 5, Benchmark and demo: corpus, metrics, results, README, video.
+Phase 3.5, Repair hardening: complete. Deterministic probe and templates, chained prompt, model fallback, real repository repair from 36.84 to 89.47 percent with 0 model calls, pushed at `7018ce1`.
+Phase 4, Alan skill and workflow: complete. Portable skill at 0.2.0, install paths for six agents, Alan automation recipe, artifact template, recorded session in `docs/DEMO.md` (83.3 to 100 percent on the fixture, 0 model calls).
+Phase 5, Benchmark and demo: next. Corpus, metrics, results, README, demo video.
 Phase 6, Hardening and submission: errors, license, release, public repo, submission.
 
 FIRST TASK: AUDIT THE CURRENT CHECKPOINT, THEN STOP
 
-Phases 0 through 3.5 are implemented in this repository. Do not recreate them. Audit them.
+Phases 0 through 4 are implemented in this repository. Do not recreate them. Audit them.
 
-1. Restate the current checkpoint and the Phase 4 goal in five lines.
+1. Restate the current checkpoint and the Phase 5 goal in five lines.
 2. Read the files in the order above. Do not overwrite work that is already correct.
 3. Run `uv sync`, `uv run testproof --version`, `uv run pytest -q`, `make check`, and `make check-full`. Paste the result.
 4. Run the fixture grade and paste the summary:
    `uv run testproof grade --repo fixtures/shop --all --test-cmd "uv run pytest -q" --format json --output .testproof/report.json`
    Expect 5 killed, 1 survived, 83.3 percent.
-5. Run `uv run testproof repair --repo fixtures/shop --report .testproof/report.json --test-cmd "pytest -q" --dry-run` and paste the kept test, the template hit count, and the model attempt count. Expect the boundary test `shipping_fee(50) == 0` and zero model calls.
+5. Run `uv run testproof repair --repo fixtures/shop --report .testproof/report.json --test-cmd "pytest -q" --dry-run` and paste the kept test, the template hit count, and the model attempt count. Expect 1 kept, 1 template hit, and zero model calls.
 6. Check that `README.md`, `AGENTS.md`, `CONSTRAINTS.md`, `docs/BUILD_PLAN.md`, and `docs/ORIENTATION.md` agree with the files on disk. Report drift. Do not edit documentation unless the human asks.
-7. If every gate is green, report the checkpoint and propose the Phase 4 plan. Do not start Phase 4 until the human says continue.
+7. If every gate is green, report the checkpoint and propose the Phase 5 plan. Do not start Phase 5 until the human says continue.
 8. If a gate fails, fix only the cause, add or adjust a test, rerun the gate, and report the delta.
 
 CURRENT ACCEPTANCE
@@ -73,17 +73,16 @@ CURRENT ACCEPTANCE
 - `make check-full` is green, with coverage at or above 85 percent.
 - The fixture grade is reproducible at 83.3 percent.
 - Template repair kills the fixture survivor without a model call.
-- The real repository evidence in `docs/BUILD_PLAN.md` and `docs/EVAL.md` matches the recorded numbers.
+- The real repository and model benchmark evidence in `docs/BUILD_PLAN.md`, `docs/EVAL.md`, and `docs/MODEL_BENCHMARK.md` matches the recorded numbers.
+- The recorded fixture session in `docs/DEMO.md` matches the commands and outputs.
 - The working tree is not modified by grading or by a dry run repair.
 
-PHASE 4 SCOPE
+PHASE 5 SCOPE
 
-1. Finalize `skills/testproof/SKILL.md` so a fresh agent can run grade, repair, re grade, and report without inventing flags.
-2. Add install instructions for Alan, Claude Code, Codex, Cursor, Gemini CLI, and OpenCode.
-3. Write the Alan automation recipe: trigger, commands, artifact, and the human review gate.
-4. Add a report artifact template for an Alan task.
-5. Record an end to end session: grade the weak fixture, show the survivor, repair, re grade, and attach the report.
-6. Update the docs and commit at the checkpoint.
+3. Write `benchmark/run.py`: grade before, repair, re grade, bug detection before and after, acceptance rate, runtime.
+4. Produce `benchmark/results.md` from raw JSON reports, not by hand, and update `docs/EVAL.md`.
+5. Record the demo video and draft an X post.
+6. Update the README quickstart with the measured results and commit at the checkpoint.
 
 WORKING AGREEMENT
 
@@ -109,7 +108,7 @@ STYLE
 
 START
 
-Begin with the current checkpoint restatement and the file inspection. Do not start Phase 4. Stop after the audit and the Phase 4 proposal.
+Begin with the current checkpoint restatement and the file inspection. Do not start Phase 5. Stop after the audit and the Phase 5 proposal.
 ```
 
 ---
@@ -120,6 +119,6 @@ Begin with the current checkpoint restatement and the file inspection. Do not st
 2. Paste the block.
 3. Let the agent inspect the existing files before editing.
 4. At the checkpoint, review the diff and run the acceptance commands yourself.
-5. Only then start Phase 4 with a new message: "Phase 4 only. Restate the goal and acceptance criteria, then proceed."
+5. Only then start Phase 5 with a new message: "Phase 5 only. Restate the goal and acceptance criteria, then proceed."
 
 Do not ask for all phases at once. The checkpoints are the control surface.

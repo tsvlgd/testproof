@@ -63,7 +63,7 @@ If a rule is unclear, ask in the OpenFire Discord before spending build time. Th
 
 ## What exists today
 
-Phase 0, Phase 1, Phase 2, and Phase 3 are complete and pushed. Phase 3.5 hardened repair with deterministic templates and a real repository run. Phase 4, the Alan skill and workflow, is next.
+Phase 0, Phase 1, Phase 2, and Phase 3 are complete and pushed. Phase 3.5 hardened repair with deterministic templates and a real repository run. Phase 4 delivered the portable skill, install paths, the Alan automation recipe, the artifact template, and the recorded session. Phase 5, the benchmark corpus and the demo video, is next.
 
 | Area | Status | Where |
 | --- | --- | --- |
@@ -72,8 +72,9 @@ Phase 0, Phase 1, Phase 2, and Phase 3 are complete and pushed. Phase 3.5 harden
 | Research and positioning | Complete | `docs/CROSS_RESEARCH.md` |
 | Evaluation design | Complete | `docs/EVAL.md` |
 | Build and evidence method | Complete | `docs/METHODOLOGY.md` |
-| Alan, CI, and local flows | Complete draft | `docs/WORKFLOW.md` |
-| Agent skill | Drafted, Phase 4 final pass pending | `skills/testproof/SKILL.md` |
+| Alan, CI, and local flows | Complete | `docs/WORKFLOW.md` |
+| Agent skill | Final at 0.2.0 with install paths | `skills/testproof/SKILL.md` |
+| Recorded session and artifact | Complete, transcript form | `docs/DEMO.md` |
 | Weak demonstration fixture | Working | `fixtures/shop/` |
 | CLI version, diff, and grade commands | Working | `src/testproof/cli.py` |
 | Diff resolver | Working, worktree and commit modes | `src/testproof/diff.py` |
@@ -102,8 +103,8 @@ The project has a local commit history and a private GitHub repository at `https
 | 2 Report and CI gate | Turn the score into a pull request gate | Markdown, threshold, exit codes, GitHub Action | Pull request fails below threshold | Complete |
 | 3 Verified repair | Let an open model write missing tests and prove each kill | Model client, prompt, verifier, apply | Score rises with verified tests | Complete |
 | 3.5 Repair hardening | Make repair credible on a real repository | Deterministic probe and templates, model fallback, benchmark | Real repo score rises with verified tests | Complete |
-| 4 Alan skill and workflow | Make the tool usable in a real Alan session | Skill, automation recipe, artifact, recording | Skill runs end to end | Next |
-| 5 Benchmark and demo | Prove the tool works beyond the fixture | Corpus, metrics, results, video | Before and after are measurable | Planned |
+| 4 Alan skill and workflow | Make the tool usable in a real Alan session | Skill, automation recipe, artifact, recording | Skill runs end to end | Complete |
+| 5 Benchmark and demo | Prove the tool works beyond the fixture | Corpus, metrics, results, video | Before and after are measurable | Next |
 | 6 Hardening and submission | A fresh clone works and the submission is complete | Errors, release, public repo, X post | Fresh clone works | Planned |
 
 The build plan assumes a 31 hour window from Monday 1 PM IST to Tuesday 8 PM IST. If the clock is already behind, use the cut lines in `docs/BUILD_PLAN.md`. Do not lower the quality bar. The first cut is usually the optional viewer, the second is the second language adapter, and the third is the marketplace plugin.
@@ -191,7 +192,7 @@ The real repository result is the stronger signal. A three module repository wit
 
 Repair runs deterministic templates first. A probe executes the target function on the original and the mutant, and only observed differences become assertions. The model is a fallback for survivors the templates cannot handle. The verifier still decides what is kept. The fallback default `qwen/qwen3-235b-a22b-2507` is measured in `docs/MODEL_BENCHMARK.md`.
 
-Next is Phase 4: finalize the portable skill, write the install and Alan automation instructions, record a real session, and attach a report artifact. Then Phase 5 builds the benchmark corpus and the demo. See `docs/BUILD_PLAN.md` for the gates and checkpoints.
+Next is Phase 5: the benchmark corpus (10 to 20 modules with known bug versions), `benchmark/run.py`, `benchmark/results.md`, the demo video, and README polish. Phase 6 then hardens and submits. See `docs/BUILD_PLAN.md` for the gates and checkpoints.
 
 ## Reading order
 
