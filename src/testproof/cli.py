@@ -13,6 +13,8 @@ import typer
 from testproof import __version__
 from testproof.diff import ChangedFile, Diff, DiffError, resolve_diff
 from testproof.engine import MutationEngine
+from testproof.model import ModelClient
+from testproof.repair import RepairEngine
 from testproof.report import to_json, to_markdown
 
 app = typer.Typer(
@@ -336,6 +338,86 @@ def report_command(
         output.write_text(content, encoding="utf-8")
     else:
         typer.echo(content)
+
+
+@app.command("repair")
+def repair_command(
+    repo: Annotated[
+        Path,
+        typer.Option(help="Repository root. Defaults to the current directory."),
+    ] = Path(),
+    report: Annotated[
+        Path,
+        typer.Option(help="Path to the JSON report from a previous grade."),
+    ] = Path(".testproof/report.json"),
+    test_cmd: Annotated[
+        str,
+        typer.Option(help="Test command to run for verification."),
+    ] = "pytest -q",
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Propose tests without writing them."),
+    ] = False,
+    apply: Annotated[
+        bool,
+        typer.Option("--apply", help="Write verified tests to the test file."),
+    ] = False,
+) -> None:
+    """Repair survivors with an open source model."""
+    import json as _json
+
+    from testproof.models import Report
+
+    report_data = _json.loads(report.read_text(encoding="utf-8"))
+    # Reconstruct report
+    from testproof.models import (
+        FileReport,
+        Mutant,
+        MutationPoint,
+        RunInfo,
+        Summary,
+        ToolInfo,
+    )
+
+    run = RunInfo(**report_data["run"])
+    summary = Summary(**report_data["summary"])
+    files = []
+    for f in report_data["files"]:
+        mutants = []
+        for m in f["mutants"]:
+            point = MutationPoint(**m["point"])
+            mutants.append(
+                Mutant(
+                    point=point,
+                    status=m["status"],
+                    duration_ms=m["duration_ms"],
+                    output=m["output"],
+                )
+            )
+        files.append(FileReport(path=f["path"], score=f["score"], mutants=tuple(mutants)))
+    rep = Report(
+        schema_version=report_data["schema_version"],
+        tool=ToolInfo(**report_data["tool"]),
+        run=run,
+        summary=summary,
+        files=tuple(files),
+        errors=tuple(report_data.get("errors", [])),
+    )
+
+    model = ModelClient.from_env()
+    repair_engine = RepairEngine(repo=repo, test_command=test_cmd, model_client=model)
+
+    result = repair_engine.repair(rep, dry_run=dry_run, apply=apply)
+
+    typer.echo(f"Kept: {len(result.kept)}")
+    typer.echo(f"Rejected: {len(result.rejected)}")
+    for record in result.rejected:
+        typer.echo(f"  Rejected {record.test_id}: {record.reason}")
+    for mutant_id, test_code in result.kept:
+        typer.echo(f"  Kept test for {mutant_id}:")
+        typer.echo(test_code)
+
+    model.close()
 
 
 if __name__ == "__main__":
