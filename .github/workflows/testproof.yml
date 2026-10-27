@@ -2,7 +2,7 @@ name: TestProof
 
 on:
   pull_request:
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: read
@@ -17,18 +17,20 @@ jobs:
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
+      - name: Install
+        run: uv sync
       - name: Grade test strength
         run: |
-          uvx testproof grade \
+          uv run testproof grade \
             --base "origin/${{ github.base_ref }}" \
             --head HEAD \
-            --test-cmd "pytest -q" \
+            --test-cmd "uv run pytest -q" \
             --threshold 80 \
             --format json \
             --output testproof.json
       - name: Render markdown
         if: always()
-        run: uvx testproof report --input testproof.json --format markdown --output testproof.md
+        run: uv run testproof report --input testproof.json --format markdown --output testproof.md
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
