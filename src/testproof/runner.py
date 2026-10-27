@@ -23,7 +23,13 @@ def _decode_output(output: str | bytes | None) -> str:
     return output
 
 
-def run_tests(cmd: str, cwd: Path, timeout_seconds: int = 30) -> TestResult:
+def run_tests(
+    cmd: str,
+    cwd: Path,
+    timeout_seconds: int = 30,
+    *,
+    env: dict[str, str] | None = None,
+) -> TestResult:
     start = time.monotonic()
     try:
         result = subprocess.run(
@@ -32,6 +38,7 @@ def run_tests(cmd: str, cwd: Path, timeout_seconds: int = 30) -> TestResult:
             capture_output=True,
             text=True,
             timeout=timeout_seconds,
+            env=env,
         )
         duration_ms = int((time.monotonic() - start) * 1000)
         return TestResult(

@@ -24,6 +24,14 @@ class Sandbox:
                 self._repo,
                 workspace,
                 dirs_exist_ok=True,
-                ignore=shutil.ignore_patterns(".git"),
+                ignore=shutil.ignore_patterns(
+                    ".git",
+                    ".venv",
+                    "__pycache__",
+                    ".pytest_cache",
+                    ".mypy_cache",
+                    ".ruff_cache",
+                    ".coverage",
+                ),
             )
             yield workspace

@@ -47,3 +47,18 @@ def test_sandbox_copies_repository_without_git_metadata(tmp_path: Path) -> None:
     with Sandbox(repo).create() as workspace:
         assert (workspace / "module.py").is_file()
         assert not (workspace / ".git").exists()
+
+
+def test_sandbox_excludes_virtualenv_and_caches(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".venv").mkdir()
+    (repo / ".venv" / "marker.txt").write_text("venv", encoding="utf-8")
+    (repo / "__pycache__").mkdir()
+    (repo / "__pycache__" / "cache.pyc").write_bytes(b"cache")
+    (repo / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
+
+    with Sandbox(repo).create() as workspace:
+        assert (workspace / "module.py").is_file()
+        assert not (workspace / ".venv").exists()
+        assert not (workspace / "__pycache__").exists()

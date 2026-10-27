@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 from pathlib import Path
 
@@ -107,11 +108,22 @@ class MutationEngine:
 
         started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         grade_started = time.monotonic()
+
+        def _sandbox_env(workspace: Path) -> dict[str, str]:
+            env = dict(os.environ)
+            env.pop("VIRTUAL_ENV", None)
+            src_dir = workspace / "src"
+            if src_dir.is_dir():
+                existing = env.get("PYTHONPATH", "")
+                env["PYTHONPATH"] = str(src_dir) + (os.pathsep + existing if existing else "")
+            return env
+
         with Sandbox(self._repo).create() as baseline_workspace:
             baseline = run_tests(
                 self._test_command,
                 cwd=baseline_workspace,
                 timeout_seconds=self._test_timeout_seconds,
+                env=_sandbox_env(baseline_workspace),
             )
         if baseline.timed_out or baseline.killed:
             raise RuntimeError("Baseline test command failed; cannot compute a score")
@@ -155,15 +167,39 @@ class MutationEngine:
             file_survived = 0
 
             for point in selected_points:
-                if time.monotonic() - grade_started >= budget:
+                remaining_budget = budget - (time.monotonic() - grade_started)
+                if remaining_budget <= 0:
                     mutants.append(Mutant(point=point, status="skipped"))
                     skipped += 1
                     continue
+
+                # Use the remaining budget as the timeout if it's less than the test timeout
+                effective_timeout = min(self._test_timeout_seconds, max(1, int(remaining_budget)))
+
+                # Progress reporting
+                import sys as _sys
+
+                progress = selected_count - len(selected_points) + selected_points.index(point) + 1
+                print(
+                    f"  grading {rel_path}:{point.line} "
+                    f"({point.operator} {point.original} -> {point.replacement}) "
+                    f"[{progress}/{selected_count}]",
+                    file=_sys.stderr,
+                )
 
                 mutant_started = time.monotonic()
                 status: MutantStatus
                 output = ""
                 duration_ms = 0
+
+                import sys as _sys
+
+                progress = selected_count - len(selected_points) + selected_points.index(point) + 1
+                detail = f"{point.operator} {point.original!r} -> {point.replacement!r}"
+                print(
+                    f"  [{progress}/{selected_count}] {rel_path}:{point.line} {detail}",
+                    file=_sys.stderr,
+                )
                 try:
                     with Sandbox(self._repo).create() as mutant_workspace:
                         mutant_path = self._safe_path(mutant_workspace, rel_path)
@@ -177,7 +213,8 @@ class MutationEngine:
                             result: TestResult = run_tests(
                                 self._test_command,
                                 cwd=mutant_workspace,
-                                timeout_seconds=self._test_timeout_seconds,
+                                timeout_seconds=effective_timeout,
+                                env=_sandbox_env(mutant_workspace),
                             )
                             output = result.output
                             if result.timed_out:

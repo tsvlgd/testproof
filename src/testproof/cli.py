@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -149,14 +151,44 @@ def grade_command(
 ) -> None:
     """Grade whether a test suite catches bugs."""
 
+    original_repo = repo
     try:
+        # When --head names a commit, grade the source at that commit
+        if head is not None and head != "WORKTREE":
+            temp_dir = tempfile.mkdtemp(prefix="testproof-head-")
+            archive_proc = subprocess.run(
+                ["git", "-C", str(repo), "archive", "--format=tar", head],
+                capture_output=True,
+                check=True,
+            )
+            extract_proc = subprocess.run(
+                ["tar", "-xf", "-", "-C", temp_dir],
+                input=archive_proc.stdout,
+                capture_output=True,
+            )
+            if extract_proc.returncode != 0:
+                raise RuntimeError(
+                    f"Failed to extract commit source: {extract_proc.stderr.decode()}"
+                )
+            repo = Path(temp_dir)
+
         if all_files:
             repo = repo.resolve()
             changed_files: list[tuple[str, set[int] | None]] = []
-            excluded = {".git", ".venv", "__pycache__"}
+            excluded = {
+                ".git",
+                ".venv",
+                "__pycache__",
+                ".pytest_cache",
+                ".mypy_cache",
+                ".ruff_cache",
+            }
             for path in repo.rglob("*.py"):
                 relative = path.relative_to(repo)
                 if excluded.intersection(relative.parts):
+                    continue
+                # Skip test files and documentation
+                if relative.name.startswith("test_") or relative.name.endswith("_test.py"):
                     continue
                 changed_files.append((relative.as_posix(), None))
             target = "WORKTREE"
@@ -164,9 +196,17 @@ def grade_command(
             base_ref = None
             head_ref = None
         else:
-            diff = resolve_diff(repo=repo, base=base, head=head)
+            diff = resolve_diff(repo=original_repo, base=base, head=head)
             changed_files = []
             for changed in diff.files:
+                # Skip non-Python files, test files, and documentation
+                if not changed.path.endswith(".py"):
+                    continue
+                if changed.path.startswith("docs/") or changed.path.startswith("scripts/"):
+                    continue
+                basename = Path(changed.path).name
+                if basename.startswith("test_") or basename.endswith("_test.py"):
+                    continue
                 line_set = None
                 if changed.lines:
                     line_set = {ln for rng in changed.lines for ln in range(rng.start, rng.end + 1)}
